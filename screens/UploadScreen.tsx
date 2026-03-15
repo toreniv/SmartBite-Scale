@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Loader2, Upload } from "lucide-react";
+import { ArrowLeft, ImagePlus, Loader2, Upload } from "lucide-react";
 import type { ChangeEvent } from "react";
 
 interface UploadScreenProps {
@@ -23,19 +23,27 @@ export function UploadScreen({
   onBack,
 }: UploadScreenProps) {
   return (
-    <div className="phone-frame flex flex-col px-5 pb-8 pt-8">
-      <div className="glass-card w-full rounded-[32px] p-5">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onBack}
-            className="rounded-full bg-slate-100 p-2 text-slate-700 transition hover:bg-slate-200"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <h2 className="text-2xl font-bold text-blue-500">Upload Food Image</h2>
+    <div className="phone-frame flex flex-col px-5 pb-8 pt-6">
+      <div className="flex items-center justify-between">
+        <div className="badge-chip">Upload flow</div>
+        <button onClick={onBack} className="ghost-button !w-auto px-4 py-2 text-xs">
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </button>
+      </div>
+
+      <div className="mt-5 surface-card-strong w-full rounded-[34px] p-5">
+        <div>
+          <h2 className="text-[1.9rem] font-semibold tracking-[-0.04em] text-slate-950">
+            Upload a food image
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Use a well-lit image with the plate centered. SmartBite will prepare the same analysis
+            flow without opening the camera.
+          </p>
         </div>
 
-        <div className="mt-6 rounded-[28px] border-2 border-dashed border-blue-300 bg-slate-50 p-4 text-center">
+        <div className="mt-6 rounded-[30px] border border-dashed border-blue-200 bg-[linear-gradient(180deg,rgba(248,251,255,0.96),rgba(239,246,255,0.82))] p-4 text-center">
           <input
             id="image-upload"
             type="file"
@@ -45,43 +53,79 @@ export function UploadScreen({
           />
           <label
             htmlFor="image-upload"
-            className="flex cursor-pointer flex-col items-center gap-4 py-6"
+            className="flex cursor-pointer flex-col items-center gap-4 rounded-[24px] px-3 py-5"
           >
-            <Upload className="h-11 w-11 text-blue-500" />
             {previewUrl ? (
-              <div className="aspect-[4/3] w-full overflow-hidden rounded-3xl">
-                <img src={previewUrl} alt="Food preview" className="h-full w-full object-cover" />
-              </div>
+              <>
+                <div className="aspect-[4/3] w-full overflow-hidden rounded-[24px] shadow-[0_18px_32px_rgba(15,23,42,0.12)]">
+                  <img src={previewUrl} alt="Food preview" className="h-full w-full object-cover" />
+                </div>
+                <div className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">
+                  Replace image
+                </div>
+              </>
             ) : (
-              <p className="text-sm text-slate-500">Select an image to preview and analyze</p>
+              <>
+                <div className="icon-surface bg-blue-100 text-blue-600">
+                  <ImagePlus className="h-8 w-8" />
+                </div>
+                <div>
+                  <div className="text-base font-semibold text-slate-900">Choose a meal photo</div>
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                    JPG or PNG works best. Overhead or slightly angled photos are easiest to read.
+                  </p>
+                </div>
+              </>
             )}
           </label>
         </div>
 
-        {showWeight ? (
-          <div className="mt-5 rounded-3xl bg-slate-50 px-4 py-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Current Weight</div>
-            <div className="mt-2 text-2xl font-bold text-slate-800">{weight.toFixed(1)}g</div>
-          </div>
-        ) : null}
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          {showWeight ? (
+            <div className="rounded-[24px] bg-slate-50 px-4 py-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Current weight
+              </div>
+              <div className="mt-2 text-xl font-semibold text-slate-900">{weight.toFixed(1)}g</div>
+            </div>
+          ) : (
+            <div className="empty-state-card px-4 py-4">
+              <div className="text-sm font-semibold text-slate-900">No scale reading attached</div>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                That is fine. You can still upload a photo and continue with image-only analysis.
+              </p>
+            </div>
+          )}
 
-        <button
-          onClick={onUpload}
-          disabled={uploading}
-          className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-500 px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-70"
-        >
+          <div className="rounded-[24px] bg-slate-50 px-4 py-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+              Best results
+            </div>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Keep shadows soft and let the plate fill most of the frame.
+            </p>
+          </div>
+        </div>
+
+        <button onClick={onUpload} disabled={uploading || !previewUrl} className="primary-button mt-6">
           {uploading ? (
             <>
               <Loader2 className="h-5 w-5 animate-spin" />
-              Uploading...
+              Uploading image
             </>
           ) : (
             <>
               <Upload className="h-5 w-5" />
-              Upload and Analyze
+              Upload and analyze
             </>
           )}
         </button>
+
+        {!previewUrl ? (
+          <p className="mt-3 text-center text-sm text-slate-500">
+            Select an image first to continue.
+          </p>
+        ) : null}
       </div>
     </div>
   );

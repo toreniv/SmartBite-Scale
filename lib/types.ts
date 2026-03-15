@@ -13,7 +13,20 @@ export type AppPhase = "welcome" | "connect" | "app";
 
 export type AppSection = "home" | "capture" | "history" | "profile" | "debug";
 
+export type Screen =
+  | "welcome"
+  | "device-scan"
+  | "menu"
+  | "camera"
+  | "upload"
+  | "debug";
+
 export type AnalysisProvider = "openai" | "gemini" | "mock";
+
+export type AnalyzeMealErrorCode =
+  | "INVALID_REQUEST"
+  | "PROVIDER_UNAVAILABLE"
+  | "ANALYSIS_FAILED";
 
 export type PermissionStateLike = "granted" | "denied" | "prompt" | "unknown";
 
@@ -172,6 +185,23 @@ export interface AnalyzeMealPayload extends AnalyzeMealRequest {
   fallbackToGemini?: boolean;
 }
 
+export interface AnalyzeMealProviderAttempt {
+  provider: AnalysisProvider;
+  status: "success" | "failed";
+  message?: string;
+}
+
 export interface AnalyzeMealResponse extends MealAnalysisResult {
   disclaimer: string;
+  usedFallback: boolean;
+  attempts: AnalyzeMealProviderAttempt[];
+}
+
+export interface AnalyzeMealErrorResponse {
+  error: {
+    code: AnalyzeMealErrorCode;
+    message: string;
+    retryable: boolean;
+  };
+  attempts?: AnalyzeMealProviderAttempt[];
 }

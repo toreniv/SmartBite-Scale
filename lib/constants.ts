@@ -2,6 +2,7 @@ import type {
   ActivityLevel,
   GoalType,
   RecommendationItem,
+  Screen,
   UserProfile,
 } from "@/lib/types";
 
@@ -43,6 +44,8 @@ export const DEFAULT_PROFILE: UserProfile = {
 
 export const APP_DISCLAIMER =
   "Nutrition estimates are supportive guidance only and are not a medical diagnosis.";
+
+export const INITIAL_SCREEN: Screen = "welcome";
 
 export const EMPTY_RECOMMENDATIONS: RecommendationItem[] = [
   {

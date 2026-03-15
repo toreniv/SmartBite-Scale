@@ -1,11 +1,35 @@
-import { normalizeAnalysisResult } from "@/lib/ai/normalize";
 import type { AnalyzeMealRequest } from "@/lib/types";
+import { normalizeAnalysisResult } from "@/lib/ai/normalize";
 
 const MOCK_MEALS = [
-  { foodName: "Chicken rice bowl", density: 1.7, proteinRatio: 0.22, carbRatio: 0.34, fatRatio: 0.11 },
-  { foodName: "Avocado toast", density: 2.4, proteinRatio: 0.09, carbRatio: 0.28, fatRatio: 0.15 },
-  { foodName: "Pasta with tomato sauce", density: 1.6, proteinRatio: 0.11, carbRatio: 0.31, fatRatio: 0.08 },
-  { foodName: "Greek yogurt fruit bowl", density: 1.15, proteinRatio: 0.16, carbRatio: 0.18, fatRatio: 0.06 },
+  {
+    foodName: "Chicken rice bowl",
+    caloriesPerGram: 1.72,
+    proteinPerGram: 0.084,
+    carbsPerGram: 0.112,
+    fatPerGram: 0.042,
+  },
+  {
+    foodName: "Avocado toast",
+    caloriesPerGram: 2.35,
+    proteinPerGram: 0.051,
+    carbsPerGram: 0.166,
+    fatPerGram: 0.109,
+  },
+  {
+    foodName: "Pasta with tomato sauce",
+    caloriesPerGram: 1.58,
+    proteinPerGram: 0.048,
+    carbsPerGram: 0.208,
+    fatPerGram: 0.036,
+  },
+  {
+    foodName: "Greek yogurt fruit bowl",
+    caloriesPerGram: 1.14,
+    proteinPerGram: 0.079,
+    carbsPerGram: 0.124,
+    fatPerGram: 0.028,
+  },
 ];
 
 function hashString(value: string) {
@@ -13,25 +37,21 @@ function hashString(value: string) {
 }
 
 export async function analyzeMealWithMock(request: AnalyzeMealRequest) {
-  const weight = Math.max(request.measuredWeightGrams ?? 180, 60);
-  const seed = hashString(request.note ?? request.imageBase64.slice(0, 40));
-  const preset = MOCK_MEALS[seed % MOCK_MEALS.length];
-  const calories = Math.round(weight * preset.density);
-  const protein = Math.round(weight * preset.proteinRatio);
-  const carbs = Math.round(weight * preset.carbRatio);
-  const fat = Math.round(weight * preset.fatRatio);
+  const fallbackSeed = `${request.note ?? ""}:${request.imageBase64.slice(0, 64)}`;
+  const preset = MOCK_MEALS[hashString(fallbackSeed) % MOCK_MEALS.length];
+  const estimatedWeightGrams = Math.max(Math.round(request.measuredWeightGrams ?? 180), 60);
 
   return normalizeAnalysisResult(
     {
       foodName: preset.foodName,
-      estimatedWeightGrams: request.measuredWeightGrams ?? weight,
-      calories,
-      protein,
-      carbs,
-      fat,
-      confidence: request.measuredWeightGrams ? 0.86 : 0.71,
+      estimatedWeightGrams,
+      calories: estimatedWeightGrams * preset.caloriesPerGram,
+      protein: estimatedWeightGrams * preset.proteinPerGram,
+      carbs: estimatedWeightGrams * preset.carbsPerGram,
+      fat: estimatedWeightGrams * preset.fatPerGram,
+      confidence: request.measuredWeightGrams ? 0.82 : 0.68,
       explanation:
-        "This estimate uses visible meal features, portion heuristics, and any measured scale weight provided.",
+        "This is a mock estimate generated from portion heuristics because no real AI provider key is configured.",
     },
     "mock",
   );

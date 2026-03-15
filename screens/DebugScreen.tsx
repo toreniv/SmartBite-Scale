@@ -1,6 +1,6 @@
 "use client";
 
-import { SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, Cpu, SlidersHorizontal } from "lucide-react";
 import { LED_COMMANDS } from "@/lib/constants";
 import type { LEDColor, PermissionStateLike } from "@/lib/types";
 
@@ -22,9 +22,9 @@ interface DebugScreenProps {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+    <div className="flex items-center justify-between rounded-[22px] bg-slate-50 px-4 py-3">
       <span className="text-sm text-slate-500">{label}</span>
-      <span className="text-sm font-semibold text-slate-800">{value}</span>
+      <span className="text-sm font-semibold text-slate-900">{value}</span>
     </div>
   );
 }
@@ -45,9 +45,29 @@ export function DebugScreen({
   onTestCamera,
 }: DebugScreenProps) {
   return (
-    <div className="phone-frame flex flex-col px-5 pb-8 pt-8">
-      <div className="glass-card w-full rounded-[32px] p-5">
-        <h2 className="text-2xl font-bold text-blue-500">Debug Information</h2>
+    <div className="phone-frame flex flex-col px-5 pb-8 pt-6">
+      <div className="flex items-center justify-between">
+        <div className="badge-chip">Debug</div>
+        <button onClick={onBack} className="ghost-button !w-auto px-4 py-2 text-xs">
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </button>
+      </div>
+
+      <div className="mt-5 surface-card-strong w-full rounded-[34px] p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-slate-950">
+              Device diagnostics
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Internal controls and environment details for testing the SmartBite flow.
+            </p>
+          </div>
+          <div className="icon-surface bg-blue-100 text-blue-600">
+            <Cpu className="h-5 w-5" />
+          </div>
+        </div>
 
         <div className="mt-5 space-y-3">
           <Row label="Is Native" value={isNative ? "Yes" : "No"} />
@@ -62,24 +82,18 @@ export function DebugScreen({
         </div>
 
         <div className="mt-5 flex gap-3">
-          <button
-            onClick={onTestCamera}
-            className="flex-1 rounded-2xl bg-blue-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-600"
-          >
+          <button onClick={onTestCamera} className="primary-button">
             Test Camera
           </button>
-          <button
-            onClick={onTestBleScan}
-            className="flex-1 rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
-          >
+          <button onClick={onTestBleScan} className="secondary-button">
             Test BLE Scan
           </button>
         </div>
 
         {deviceConnected ? (
           <>
-            <div className="mt-5">
-              <div className="mb-2 text-sm font-semibold text-slate-600">LED Commands</div>
+            <div className="mt-6 rounded-[28px] bg-slate-50 px-4 py-4">
+              <div className="mb-3 text-sm font-semibold text-slate-700">LED Commands</div>
               <div className="grid grid-cols-3 gap-2">
                 {LED_COMMANDS.map((color) => (
                   <button
@@ -88,7 +102,7 @@ export function DebugScreen({
                     className={`rounded-2xl px-3 py-2 text-xs font-semibold transition ${
                       selectedLED === color
                         ? "bg-blue-500 text-white"
-                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        : "bg-white text-slate-700 hover:bg-slate-100"
                     }`}
                   >
                     {color}
@@ -97,8 +111,8 @@ export function DebugScreen({
               </div>
             </div>
 
-            <div className="mt-5">
-              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-600">
+            <div className="mt-5 rounded-[28px] bg-slate-50 px-4 py-4">
+              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
                 <SlidersHorizontal className="h-4 w-4" />
                 Brightness
               </div>
@@ -114,13 +128,6 @@ export function DebugScreen({
           </>
         ) : null}
       </div>
-
-      <button
-        onClick={onBack}
-        className="mt-6 rounded-full bg-blue-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-300/50 transition hover:bg-blue-600"
-      >
-        Back to Main Menu
-      </button>
     </div>
   );
 }

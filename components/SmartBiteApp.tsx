@@ -35,11 +35,14 @@ export function SmartBiteApp() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
 
   const bluetooth = useBluetoothScale();
   const camera = useCamera();
 
   const platform = useMemo(() => getPlatformLabel(), []);
+  const displayWeight =
+    bluetooth.stableWeight > 0 ? bluetooth.stableWeight : bluetooth.latestWeight;
 
   useEffect(() => {
     if (screen !== "camera") {
@@ -89,13 +92,19 @@ export function SmartBiteApp() {
   };
 
   const handleAnalyze = async () => {
+    if (analyzing) {
+      return;
+    }
+
     try {
-      showMessage("Analyzing image...");
+      setAnalyzing(true);
       await camera.capturePhoto();
       window.setTimeout(() => {
+        setAnalyzing(false);
         setModalMessage("Analysis complete!");
-      }, 1200);
+      }, 1100);
     } catch (error) {
+      setAnalyzing(false);
       showMessage(error instanceof Error ? error.message : "Image capture failed.");
     }
   };
@@ -125,11 +134,15 @@ export function SmartBiteApp() {
 
     try {
       await new Promise((resolve) => window.setTimeout(resolve, 1600));
-      showMessage("Image uploaded successfully! Analyzing...");
-      window.setTimeout(() => {
-        setScreen("menu");
-        setUploading(false);
-      }, 1400);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
+
+      setSelectedFile(null);
+      setScreen("menu");
+      setUploading(false);
+      showMessage("Image uploaded successfully. Meal analysis will appear here once connected.");
     } catch {
       setUploading(false);
       showMessage("Upload failed. Please try again.");
@@ -188,7 +201,7 @@ export function SmartBiteApp() {
           scanning={bluetooth.isConnecting}
           onSkip={handleContinueWithoutScale}
           onCancel={() => {
-            bluetooth.cancelConnection();
+            bluetooth.disconnect();
             setScreen("welcome");
           }}
         />
@@ -196,7 +209,11 @@ export function SmartBiteApp() {
 
       {screen === "menu" ? (
         <MenuScreen
-          isBypassMode={!bluetooth.isConnected}
+          isBypassMode={bluetooth.isBypassMode}
+          connectionLabel={bluetooth.connectionLabel}
+          latestWeight={bluetooth.latestWeight}
+          stableWeight={bluetooth.stableWeight}
+          measurementStatus={bluetooth.measurementStatus}
           onScanFood={handleOpenCamera}
           onUploadImage={() => setScreen("upload")}
           onCalibrate={handleCalibrate}
@@ -211,9 +228,12 @@ export function SmartBiteApp() {
       {screen === "camera" ? (
         <CameraScreen
           videoRef={camera.videoRef}
-          weight={bluetooth.weight}
+          analyzing={analyzing}
+          measurementStatus={bluetooth.measurementStatus}
+          weight={displayWeight}
           onAnalyze={handleAnalyze}
           onBack={() => {
+            setAnalyzing(false);
             camera.stopCamera();
             setScreen("menu");
           }}
@@ -224,8 +244,8 @@ export function SmartBiteApp() {
         <UploadScreen
           previewUrl={previewUrl}
           uploading={uploading}
-          weight={bluetooth.weight}
-          showWeight={bluetooth.isConnected && bluetooth.weight > 0}
+          weight={displayWeight}
+          showWeight={bluetooth.isConnected && displayWeight > 0}
           onSelectFile={handleFileSelect}
           onUpload={handleUpload}
           onBack={handleLeaveUpload}
@@ -234,10 +254,10 @@ export function SmartBiteApp() {
 
       {screen === "debug" ? (
         <DebugScreen
-          bleInitialized={bluetooth.bleInitialized}
+          bleInitialized={bluetooth.initialized}
           brightness={bluetooth.brightness}
           cameraPermission={camera.permission}
-          currentWeight={bluetooth.weight}
+          currentWeight={displayWeight}
           deviceConnected={bluetooth.isConnected}
           isNative={false}
           platform={platform}
