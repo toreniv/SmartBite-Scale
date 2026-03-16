@@ -2,7 +2,6 @@ import type {
   ActivityLevel,
   GoalType,
   RecommendationItem,
-  Screen,
   UserProfile,
 } from "@/lib/types";
 
@@ -16,6 +15,7 @@ export const LED_COMMANDS = ["RED", "GREEN", "BLUE", "YELLOW", "OFF"] as const;
 export const STORAGE_KEYS = {
   meals: "smartbite:meals",
   profile: "smartbite:profile",
+  language: "smartbite:language",
 } as const;
 
 export const ACTIVITY_LEVELS: Record<ActivityLevel, { label: string; multiplier: number }> = {
@@ -32,6 +32,12 @@ export const GOAL_LABELS: Record<GoalType, string> = {
   "gain-muscle": "Gain muscle",
 };
 
+export const GOAL_DESCRIPTIONS: Record<GoalType, string> = {
+  "lose-weight": "A moderate calorie deficit aimed at steady fat loss.",
+  maintain: "Enough energy to hold weight and support normal activity.",
+  "gain-muscle": "A small calorie surplus to support training and muscle gain.",
+};
+
 export const DEFAULT_PROFILE: UserProfile = {
   age: 29,
   sex: "female",
@@ -39,25 +45,9 @@ export const DEFAULT_PROFILE: UserProfile = {
   weightKg: 64,
   activityLevel: "moderate",
   goalType: "maintain",
-  targetWeightKg: 62,
+  targetWeightKg: 64,
 };
 
-export const APP_DISCLAIMER =
-  "Nutrition estimates are supportive guidance only and are not a medical diagnosis.";
+export const APP_DISCLAIMER = "";
 
-export const INITIAL_SCREEN: Screen = "welcome";
-
-export const EMPTY_RECOMMENDATIONS: RecommendationItem[] = [
-  {
-    id: "start-1",
-    title: "Connect your scale for better estimates",
-    body: "Stable weight readings help the app produce more grounded calorie and macro estimates.",
-    tone: "neutral",
-  },
-  {
-    id: "start-2",
-    title: "Complete your profile",
-    body: "Your calorie target and progress adapt once your height, weight, and goal are saved.",
-    tone: "good",
-  },
-];
+export const EMPTY_RECOMMENDATIONS: RecommendationItem[] = [];

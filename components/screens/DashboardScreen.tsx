@@ -1,6 +1,7 @@
 "use client";
 
 import { AnalysisResultCard } from "@/components/cards/AnalysisResultCard";
+import { DailyGoalsCard } from "@/components/cards/DailyGoalsCard";
 import { GoalSummaryCard } from "@/components/cards/GoalSummaryCard";
 import { RecommendationCard } from "@/components/cards/RecommendationCard";
 import { ScaleStatusCard } from "@/components/cards/ScaleStatusCard";
@@ -9,11 +10,15 @@ import { Card } from "@/components/ui/Card";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import type {
   DailyProgress,
+  HealthMetrics,
   MealAnalysisResult,
   RecommendationItem,
+  UserProfile,
 } from "@/lib/types";
 
 export function DashboardScreen({
+  profile,
+  metrics,
   progress,
   latestResult,
   measuredWeight,
@@ -27,6 +32,8 @@ export function DashboardScreen({
   onTare,
   onGoCapture,
 }: {
+  profile: UserProfile;
+  metrics: HealthMetrics;
   progress: DailyProgress;
   latestResult: MealAnalysisResult | null;
   measuredWeight: number;
@@ -43,6 +50,7 @@ export function DashboardScreen({
   return (
     <div className="space-y-4">
       <GoalSummaryCard progress={progress} />
+      <DailyGoalsCard profile={profile} metrics={metrics} progress={progress} />
 
       <Card>
         <div className="flex items-center justify-between">

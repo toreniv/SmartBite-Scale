@@ -6,6 +6,11 @@ import { Card } from "@/components/ui/Card";
 import type { DailyProgress } from "@/lib/types";
 
 export function GoalSummaryCard({ progress }: { progress: DailyProgress }) {
+  const remainingLabel =
+    progress.remainingCalories >= 0
+      ? `${progress.remainingCalories}`
+      : `+${Math.abs(progress.remainingCalories)}`;
+
   return (
     <Card className="overflow-hidden bg-[linear-gradient(160deg,rgba(219,234,254,0.95),rgba(255,255,255,0.9))]">
       <div className="flex items-start justify-between">
@@ -33,10 +38,10 @@ export function GoalSummaryCard({ progress }: { progress: DailyProgress }) {
         <div className="rounded-3xl bg-white/70 px-4 py-4">
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <Flame className="h-4 w-4 text-orange-500" />
-            Remaining
+            {progress.remainingCalories >= 0 ? "Remaining" : "Over target"}
           </div>
           <div className="mt-2 text-xl font-semibold text-slate-950">
-            {progress.remainingCalories}
+            {remainingLabel}
           </div>
         </div>
         <div className="rounded-3xl bg-white/70 px-4 py-4">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { STORAGE_KEYS } from "@/lib/constants";
+import { APP_DISCLAIMER, STORAGE_KEYS } from "@/lib/constants";
 import { buildDailyProgress, buildRecommendations, isToday } from "@/lib/nutrition";
 import { readStorage, writeStorage } from "@/lib/storage";
 import type {
@@ -23,12 +23,16 @@ function fileToDataUrl(file: Blob) {
   });
 }
 
-export function useMealAnalysis(profile: UserProfile, dailyCalorieTarget: number) {
+export function useMealAnalysis(
+  profile: UserProfile,
+  dailyCalorieTarget: number,
+  proteinTarget: number,
+) {
   const [history, setHistory] = useState<MealHistoryItem[]>([]);
   const [result, setResult] = useState<MealAnalysisResult | null>(null);
   const [status, setStatus] = useState<AnalysisStatus>("idle");
   const [error, setError] = useState("");
-  const [disclaimer, setDisclaimer] = useState("");
+  const [disclaimer, setDisclaimer] = useState(APP_DISCLAIMER);
 
   useEffect(() => {
     setHistory(readStorage<MealHistoryItem[]>(STORAGE_KEYS.meals, []));
@@ -44,8 +48,8 @@ export function useMealAnalysis(profile: UserProfile, dailyCalorieTarget: number
   );
 
   const dailyProgress = useMemo(
-    () => buildDailyProgress(dailyCalorieTarget, todayMeals),
-    [dailyCalorieTarget, todayMeals],
+    () => buildDailyProgress(dailyCalorieTarget, todayMeals, proteinTarget),
+    [dailyCalorieTarget, proteinTarget, todayMeals],
   );
 
   const recommendations: RecommendationItem[] = useMemo(

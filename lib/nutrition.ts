@@ -6,15 +6,24 @@ import type {
   RecommendationItem,
 } from "@/lib/types";
 
-export function buildMacroTargets(calories: number): MacroTargets {
-  const proteinCalories = calories * 0.3;
-  const carbCalories = calories * 0.4;
-  const fatCalories = calories * 0.3;
+function safeRatio(consumed: number, target: number) {
+  if (target <= 0) {
+    return 0;
+  }
+
+  return consumed / target;
+}
+
+export function buildMacroTargets(calories: number, proteinTarget?: number): MacroTargets {
+  const protein = proteinTarget ?? Math.round((calories * 0.3) / 4);
+  const proteinCalories = protein * 4;
+  const fatCalories = calories * 0.28;
+  const remainingCalories = Math.max(calories - proteinCalories - fatCalories, calories * 0.2);
 
   return {
     calories,
-    protein: Math.round(proteinCalories / 4),
-    carbs: Math.round(carbCalories / 4),
+    protein,
+    carbs: Math.round(remainingCalories / 4),
     fat: Math.round(fatCalories / 9),
   };
 }
@@ -22,22 +31,37 @@ export function buildMacroTargets(calories: number): MacroTargets {
 export function buildDailyProgress(
   goalCalories: number,
   meals: MealHistoryItem[],
+  proteinTarget?: number,
 ): DailyProgress {
-  const macroTargets = buildMacroTargets(goalCalories);
+  const macroTargets = buildMacroTargets(goalCalories, proteinTarget);
   const consumedCalories = meals.reduce((sum, meal) => sum + meal.calories, 0);
   const protein = meals.reduce((sum, meal) => sum + meal.protein, 0);
   const carbs = meals.reduce((sum, meal) => sum + meal.carbs, 0);
   const fat = meals.reduce((sum, meal) => sum + meal.fat, 0);
+  const remainingCalories = Math.round(goalCalories - consumedCalories);
 
   return {
     goalCalories,
     consumedCalories: Math.round(consumedCalories),
-    remainingCalories: Math.round(goalCalories - consumedCalories),
+    remainingCalories,
     mealsLogged: meals.length,
+    caloriesRatio: safeRatio(consumedCalories, goalCalories),
     macros: {
-      protein: { consumed: Math.round(protein), target: macroTargets.protein },
-      carbs: { consumed: Math.round(carbs), target: macroTargets.carbs },
-      fat: { consumed: Math.round(fat), target: macroTargets.fat },
+      protein: {
+        consumed: Math.round(protein),
+        target: macroTargets.protein,
+        ratio: safeRatio(protein, macroTargets.protein),
+      },
+      carbs: {
+        consumed: Math.round(carbs),
+        target: macroTargets.carbs,
+        ratio: safeRatio(carbs, macroTargets.carbs),
+      },
+      fat: {
+        consumed: Math.round(fat),
+        target: macroTargets.fat,
+        ratio: safeRatio(fat, macroTargets.fat),
+      },
     },
   };
 }
@@ -81,6 +105,24 @@ export function buildRecommendations(
       title: "Protein intake is on track",
       body: "You're covering protein well today. Keep the rest of your meals balanced.",
       tone: "good",
+    });
+  }
+
+  if (progress.mealsLogged >= 2 && progress.macros.protein.ratio < 0.55) {
+    recommendations.push({
+      id: "protein-gap",
+      title: "Protein is lagging behind your daily goal",
+      body: "A lean protein snack or a higher-protein dinner would close the gap without adding too many calories.",
+      tone: "neutral",
+    });
+  }
+
+  if (progress.remainingCalories < -150) {
+    recommendations.push({
+      id: "over-target",
+      title: "Today's intake is above your calorie target",
+      body: "Treat this as a trend signal, not a failure. A lighter next meal or a walk is usually enough.",
+      tone: "warning",
     });
   }
 

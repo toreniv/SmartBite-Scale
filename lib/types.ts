@@ -1,4 +1,5 @@
 export type Sex = "male" | "female";
+export type LanguageCode = "en" | "he";
 
 export type ActivityLevel =
   | "sedentary"
@@ -44,12 +45,28 @@ export interface UserProfile {
   targetWeightKg?: number;
 }
 
+export interface WeightRange {
+  minKg: number;
+  maxKg: number;
+}
+
+export interface GoalPace {
+  weeklyDeltaKg: number;
+  monthlyDeltaKg: number;
+  summary: string;
+}
+
 export interface HealthMetrics {
   bmi: number;
   bmiLabel: string;
+  healthyWeightRange: WeightRange;
   bmr: number;
   tdee: number;
+  calorieAdjustment: number;
   dailyCalorieTarget: number;
+  proteinTarget: number;
+  waterTargetLiters: number;
+  goalPace: GoalPace;
 }
 
 export interface MacroTargets {
@@ -71,10 +88,11 @@ export interface DailyProgress {
   consumedCalories: number;
   remainingCalories: number;
   mealsLogged: number;
+  caloriesRatio: number;
   macros: {
-    protein: { consumed: number; target: number };
-    carbs: { consumed: number; target: number };
-    fat: { consumed: number; target: number };
+    protein: { consumed: number; target: number; ratio: number };
+    carbs: { consumed: number; target: number; ratio: number };
+    fat: { consumed: number; target: number; ratio: number };
   };
 }
 
