@@ -4,6 +4,8 @@ import { Activity, Bug, Scale } from "lucide-react";
 import type { ReactNode } from "react";
 import type { AppSection } from "@/lib/types";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export function MobileShell({
   children,
@@ -18,23 +20,29 @@ export function MobileShell({
   connectionLabel: string;
   onOpenDebug: () => void;
 }) {
+  const { dir, t } = useLanguage();
+
   return (
-    <div className="mx-auto min-h-screen max-w-[430px] px-4 pb-28 pt-5">
+    <div dir={dir} className="mx-auto min-h-screen max-w-[430px] px-4 pb-28 pt-5">
       <div className="mb-5 flex items-center justify-between">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-500">
-            SmartBite Scale
+            {t("common.appName")}
           </div>
           <div className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
-            Nutrition companion
+            {t("common.appTagline")}
           </div>
         </div>
-        <button
-          onClick={onOpenDebug}
-          className="rounded-2xl bg-white/80 p-3 text-slate-600 shadow-sm"
-        >
-          <Bug className="h-5 w-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher />
+          <button
+            onClick={onOpenDebug}
+            aria-label={t("common.openDebugTools")}
+            className="rounded-2xl bg-white/80 p-3 text-slate-600 shadow-sm"
+          >
+            <Bug className="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
       <div className="mb-5 flex items-center gap-2 rounded-[24px] border border-white/60 bg-white/78 px-4 py-3 text-sm text-slate-600 backdrop-blur-xl">

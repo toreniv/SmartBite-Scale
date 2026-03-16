@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { useLanguage } from "@/hooks/useLanguage";
 import type { PermissionStateLike } from "@/lib/types";
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -38,32 +39,43 @@ export function DebugScreen({
   onTestBle: () => void;
   onTare: () => void;
 }) {
+  const { t } = useLanguage();
+
   return (
     <div className="space-y-4">
       <Card>
-        <div className="text-sm font-medium text-slate-500">Debug information</div>
+        <div className="text-sm font-medium text-slate-500">{t("debug.title")}</div>
         <div className="mt-4 space-y-3">
-          <Row label="Camera permissions" value={cameraPermission} />
-          <Row label="BLE supported" value={supported ? "Yes" : "No"} />
-          <Row label="BLE initialized" value={initialized ? "Yes" : "No"} />
-          <Row label="Device connected" value={isConnected ? "Yes" : "No"} />
-          <Row label="Raw live weight" value={`${latestWeight.toFixed(1)}g`} />
-          <Row label="Stabilized weight" value={`${stableWeight.toFixed(1)}g`} />
-          <Row label="Measurement status" value={measurementStatus} />
-          <Row label="Serving event" value={lastServingEvent} />
+          <Row label={t("debug.cameraPermissions")} value={cameraPermission} />
+          <Row label={t("debug.bleSupported")} value={supported ? t("common.yes") : t("common.no")} />
+          <Row label={t("debug.bleInitialized")} value={initialized ? t("common.yes") : t("common.no")} />
+          <Row label={t("debug.deviceConnected")} value={isConnected ? t("common.yes") : t("common.no")} />
+          <Row
+            label={t("debug.rawLiveWeight")}
+            value={`${latestWeight.toFixed(1)}${t("common.gramsShort")}`}
+          />
+          <Row
+            label={t("debug.stabilizedWeight")}
+            value={`${stableWeight.toFixed(1)}${t("common.gramsShort")}`}
+          />
+          <Row
+            label={t("debug.measurementStatus")}
+            value={t(`common.measurementStatus.${measurementStatus}`)}
+          />
+          <Row label={t("debug.servingEvent")} value={lastServingEvent || t("common.none")} />
         </div>
 
         <div className="mt-5 flex gap-3">
           <Button variant="secondary" fullWidth onClick={onTestCamera}>
-            Test camera
+            {t("debug.testCamera")}
           </Button>
           <Button variant="primary" fullWidth onClick={onTestBle}>
-            Test BLE scan
+            {t("debug.testBleScan")}
           </Button>
         </div>
 
         <Button variant="ghost" fullWidth className="mt-3" onClick={onTare}>
-          Tare scale
+          {t("debug.tareScale")}
         </Button>
       </Card>
     </div>

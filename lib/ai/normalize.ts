@@ -61,7 +61,11 @@ export const MEAL_ANALYSIS_JSON_SCHEMA = {
 
 export const MEAL_ANALYSIS_SYSTEM_PROMPT = [
   "You estimate nutrition for plated meals from an image and optional context.",
-  "Prefer measuredWeightGrams when it is provided and plausible.",
+  "Identify the visible food first, then estimate nutrition.",
+  "Prefer specific food names over generic labels when the image supports it.",
+  "Handle croissants, pastries, bakery items, sandwiches, wraps, bowls, mixed plates, and composed meals carefully.",
+  "Use measuredWeightGrams only for portion sizing and nutrition estimation, not for deciding the food identity.",
+  "If the food is visually specific, avoid broad labels like 'rice bowl' or 'sandwich' without the main filling or style.",
   "Return only JSON matching the supplied schema.",
   "Keep explanation concise and practical.",
 ].join(" ");
@@ -128,7 +132,11 @@ function stripCodeFence(text: string) {
 
 export function buildMealAnalysisPrompt(request: AnalyzeMealRequest) {
   return [
-    "Estimate nutrition for the meal shown in the image.",
+    "Analyze the food shown in the image.",
+    "First determine the most likely visible food item or meal.",
+    "Use a specific name when possible, such as 'salmon croissant', 'chicken wrap', or 'ham and cheese sandwich', instead of a generic category.",
+    "If there are multiple visible components, name the dominant meal clearly and reflect the whole visible portion.",
+    "Use measured weight only to refine portion size after identifying the food visually.",
     `Measured weight grams: ${request.measuredWeightGrams ?? "unknown"}`,
     `User note: ${request.note?.trim() || "none"}`,
     `Profile context: ${request.profile ? JSON.stringify(request.profile) : "none"}`,

@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { analyzeMealWithGemini, hasGeminiApiKey } from "@/lib/ai/gemini";
+import { analyzeMealWithMock } from "@/lib/ai/mock";
+import { toProviderAttempt } from "@/lib/ai/normalize";
 import { APP_DISCLAIMER, STORAGE_KEYS } from "@/lib/constants";
 import { buildDailyProgress, buildRecommendations, isToday } from "@/lib/nutrition";
 import { readStorage, writeStorage } from "@/lib/storage";
 import type {
   AnalyzeMealResponse,
   MealHistoryItem,
-  MealAnalysisResult,
   RecommendationItem,
   UserProfile,
 } from "@/lib/types";
@@ -29,7 +31,7 @@ export function useMealAnalysis(
   proteinTarget: number,
 ) {
   const [history, setHistory] = useState<MealHistoryItem[]>([]);
-  const [result, setResult] = useState<MealAnalysisResult | null>(null);
+  const [result, setResult] = useState<AnalyzeMealResponse | null>(null);
   const [status, setStatus] = useState<AnalysisStatus>("idle");
   const [error, setError] = useState("");
   const [disclaimer, setDisclaimer] = useState(APP_DISCLAIMER);
@@ -63,25 +65,46 @@ export function useMealAnalysis(
 
     try {
       const imageBase64 = await fileToDataUrl(file);
-      const response = await fetch("/api/analyze-meal", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          imageBase64,
-          note,
-          measuredWeightGrams,
-          profile,
-          fallbackToGemini: true,
-        }),
-      });
+      const request = {
+        imageBase64,
+        note,
+        measuredWeightGrams,
+        profile,
+      };
 
-      if (!response.ok) {
-        throw new Error("Analysis failed.");
+      let data: AnalyzeMealResponse;
+
+      if (hasGeminiApiKey()) {
+        try {
+          const geminiResult = await analyzeMealWithGemini(request);
+          data = {
+            ...geminiResult,
+            disclaimer: APP_DISCLAIMER,
+            usedFallback: false,
+            attempts: [toProviderAttempt("gemini", "success")],
+          };
+        } catch {
+          const mockResult = await analyzeMealWithMock(request);
+          data = {
+            ...mockResult,
+            disclaimer: APP_DISCLAIMER,
+            usedFallback: true,
+            attempts: [
+              toProviderAttempt("gemini", "failed"),
+              toProviderAttempt("mock", "success"),
+            ],
+          };
+        }
+      } else {
+        const mockResult = await analyzeMealWithMock(request);
+        data = {
+          ...mockResult,
+          disclaimer: APP_DISCLAIMER,
+          usedFallback: true,
+          attempts: [toProviderAttempt("mock", "success")],
+        };
       }
 
-      const data = (await response.json()) as AnalyzeMealResponse;
       setResult(data);
       setDisclaimer(data.disclaimer);
       setStatus("success");

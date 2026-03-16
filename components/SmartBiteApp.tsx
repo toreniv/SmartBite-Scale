@@ -1,5 +1,8 @@
+//components/SmartBiteApp.tsx
+
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState, type ChangeEvent } from "react";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { ConnectScreen } from "@/components/screens/ConnectScreen";
@@ -12,14 +15,21 @@ import { WelcomeScreen } from "@/components/screens/WelcomeScreen";
 import { Card } from "@/components/ui/Card";
 import { useBluetoothScale } from "@/hooks/useBluetoothScale";
 import { useCamera } from "@/hooks/useCamera";
+import { useLanguage } from "@/hooks/useLanguage";
 import { useMealAnalysis } from "@/hooks/useMealAnalysis";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import type { AppPhase, AppSection } from "@/lib/types";
+import { getCurrentUser, signOut as clearCurrentSession } from "@/lib/localAuth";
+import type { AppPhase, AppSection, NavDirection, User } from "@/lib/types";
+
+const TAB_ORDER: AppSection[] = ["home", "capture", "history", "profile"];
 
 export function SmartBiteApp() {
+  const { dir, t } = useLanguage();
   const [phase, setPhase] = useState<AppPhase>("welcome");
   const [section, setSection] = useState<AppSection>("home");
+  const [navDirection, setNavDirection] = useState<NavDirection>("none");
   const [debugOpen, setDebugOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedUploadFile, setSelectedUploadFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [mealNote, setMealNote] = useState("");
@@ -31,10 +41,14 @@ export function SmartBiteApp() {
   const analysis = useMealAnalysis(profile, metrics.dailyCalorieTarget, metrics.proteinTarget);
 
   useEffect(() => {
+    setCurrentUser(getCurrentUser());
+  }, []);
+
+  useEffect(() => {
     if (section !== "capture") {
       camera.stopCamera();
     }
-  }, [section]);
+  }, [camera, section]);
 
   useEffect(() => {
     if (!toast) {
@@ -54,9 +68,43 @@ export function SmartBiteApp() {
   }, [previewUrl]);
 
   const measuredWeight = bluetooth.stableWeight || bluetooth.latestWeight || undefined;
+  const connectionLabel = bluetooth.isConnected
+    ? t(
+        bluetooth.deviceName
+          ? "common.connectionLabel.connectedTo"
+          : "common.connectionLabel.connected",
+        { name: bluetooth.deviceName },
+      )
+    : bluetooth.isBypassMode
+      ? t("common.connectionLabel.bypass")
+      : t("common.connectionLabel.notConnected");
 
   const showToast = (message: string) => {
     setToast(message);
+  };
+
+  const handleAuthSuccess = () => {
+    setCurrentUser(getCurrentUser());
+  };
+
+  const handleSignOut = () => {
+    clearCurrentSession();
+    setCurrentUser(null);
+  };
+
+  const handleSectionChange = (newSection: AppSection) => {
+    const prevIndex = TAB_ORDER.indexOf(section);
+    const nextIndex = TAB_ORDER.indexOf(newSection);
+
+    const direction: NavDirection =
+      prevIndex === -1 || nextIndex === -1 || nextIndex === prevIndex
+        ? "none"
+        : nextIndex > prevIndex
+          ? "forward"
+          : "backward";
+
+    setNavDirection(direction);
+    setSection(newSection);
   };
 
   const connectScale = async () => {
@@ -94,10 +142,10 @@ export function SmartBiteApp() {
   const analyzeBlob = async (blob: Blob) => {
     try {
       await analysis.analyzeImage(blob, mealNote, measuredWeight);
-      showToast("Meal estimate ready.");
+      showToast(t("toasts.mealEstimateReady"));
       setSection("home");
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Analysis failed.");
+      showToast(error instanceof Error ? error.message : t("toasts.analysisFailed"));
     }
   };
 
@@ -106,13 +154,13 @@ export function SmartBiteApp() {
       const blob = await camera.capturePhoto();
       await analyzeBlob(blob);
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Camera capture failed.");
+      showToast(error instanceof Error ? error.message : t("toasts.cameraCaptureFailed"));
     }
   };
 
   const handleAnalyzeUpload = async () => {
     if (!selectedUploadFile) {
-      showToast("Select an image first.");
+      showToast(t("toasts.selectImageFirst"));
       return;
     }
 
@@ -121,9 +169,117 @@ export function SmartBiteApp() {
 
   const latestMeal = analysis.history[0] ?? null;
   const latestResult = analysis.result ?? latestMeal;
+  const lastServingEvent = bluetooth.lastServingEvent
+    ? t("bluetooth.servingEventAt", {
+        time: new Date(bluetooth.lastServingEvent.detectedAt).toLocaleTimeString(),
+        grams: bluetooth.lastServingEvent.grams,
+      })
+    : t("common.none");
+  const activeScreenKey = debugOpen ? `debug-${section}` : section;
+
+  let activeScreen = null;
+
+  if (debugOpen) {
+    activeScreen = (
+      <DebugScreen
+        cameraPermission={camera.permission}
+        supported={bluetooth.supported}
+        initialized={bluetooth.initialized}
+        isConnected={bluetooth.isConnected}
+        latestWeight={bluetooth.latestWeight}
+        stableWeight={bluetooth.stableWeight}
+        measurementStatus={bluetooth.measurementStatus}
+        lastServingEvent={lastServingEvent}
+        onTestCamera={async () => {
+          try {
+            await camera.startCamera();
+            camera.stopCamera();
+            showToast(t("toasts.cameraTestSucceeded"));
+          } catch (error) {
+            showToast(error instanceof Error ? error.message : t("toasts.cameraTestFailed"));
+          }
+        }}
+        onTestBle={connectScale}
+        onTare={async () => {
+          const result = await bluetooth.tare();
+          showToast(result.message);
+        }}
+      />
+    );
+  } else if (section === "home") {
+    activeScreen = (
+      <DashboardScreen
+        profile={profile}
+        metrics={metrics}
+        progress={analysis.dailyProgress}
+        latestResult={latestResult}
+        measuredWeight={measuredWeight ?? 0}
+        disclaimer={analysis.disclaimer}
+        recommendations={analysis.recommendations}
+        isConnected={bluetooth.isConnected}
+        latestWeight={bluetooth.latestWeight}
+        stableWeight={bluetooth.stableWeight}
+        measurementStatus={bluetooth.measurementStatus}
+        navDirection={navDirection}
+        onConnectScale={connectScale}
+        onTare={async () => {
+          const result = await bluetooth.tare();
+          showToast(result.message);
+        }}
+        onGoCapture={() => handleSectionChange("capture")}
+      />
+    );
+  } else if (section === "capture") {
+    activeScreen = (
+      <CaptureScreen
+        videoRef={camera.videoRef}
+        previewUrl={previewUrl}
+        note={mealNote}
+        onNoteChange={setMealNote}
+        onStartCamera={async () => {
+          try {
+            await camera.startCamera();
+          } catch (error) {
+            showToast(error instanceof Error ? error.message : t("toasts.cameraFailed"));
+          }
+        }}
+        onStopCamera={camera.stopCamera}
+        onAnalyzeCamera={handleAnalyzeCamera}
+        onSelectFile={handleSelectUpload}
+        onAnalyzeUpload={handleAnalyzeUpload}
+        cameraReady={Boolean(camera.stream)}
+        status={analysis.status}
+        stableWeight={bluetooth.stableWeight}
+        latestWeight={bluetooth.latestWeight}
+        result={latestResult}
+        disclaimer={analysis.disclaimer}
+        navDirection={navDirection}
+      />
+    );
+  } else if (section === "history") {
+    activeScreen = <HistoryScreen meals={analysis.history} navDirection={navDirection} />;
+  } else if (section === "profile") {
+    activeScreen = (
+      <ProfileScreen
+        profile={profile}
+        onChange={setProfile}
+        metrics={metrics}
+        onOpenDebug={() => setDebugOpen(true)}
+        userName={currentUser?.name}
+        onSignOut={handleSignOut}
+        navDirection={navDirection}
+      />
+    );
+  }
 
   if (phase === "welcome") {
-    return <WelcomeScreen onConnect={connectScale} onContinue={continueWithoutScale} />;
+    return (
+      <WelcomeScreen
+        onConnect={connectScale}
+        onContinue={continueWithoutScale}
+        onAuthChange={handleAuthSuccess}
+      />
+    );
   }
 
   if (phase === "connect") {
@@ -140,11 +296,11 @@ export function SmartBiteApp() {
   }
 
   return (
-    <main className="app-shell">
+    <main dir={dir} className="app-shell">
       <MobileShell
         activeSection={section}
-        onChangeSection={setSection}
-        connectionLabel={bluetooth.connectionLabel}
+        onChangeSection={handleSectionChange}
+        connectionLabel={connectionLabel}
         onOpenDebug={() => setDebugOpen(true)}
       >
         {toast ? (
@@ -153,108 +309,30 @@ export function SmartBiteApp() {
           </Card>
         ) : null}
 
-        {debugOpen ? (
-          <DebugScreen
-            cameraPermission={camera.permission}
-            supported={bluetooth.supported}
-            initialized={bluetooth.initialized}
-            isConnected={bluetooth.isConnected}
-            latestWeight={bluetooth.latestWeight}
-            stableWeight={bluetooth.stableWeight}
-            measurementStatus={bluetooth.measurementStatus}
-            lastServingEvent={
-              bluetooth.lastServingEvent
-                ? `${new Date(bluetooth.lastServingEvent.detectedAt).toLocaleTimeString()} at ${bluetooth.lastServingEvent.grams}g`
-                : "None"
-            }
-            onTestCamera={async () => {
-              try {
-                await camera.startCamera();
-                camera.stopCamera();
-                showToast("Camera test succeeded.");
-              } catch (error) {
-                showToast(error instanceof Error ? error.message : "Camera test failed.");
-              }
-            }}
-            onTestBle={connectScale}
-            onTare={async () => {
-              const result = await bluetooth.tare();
-              showToast(result.message);
-            }}
-          />
-        ) : null}
-
-        {!debugOpen && section === "home" ? (
-          <DashboardScreen
-            profile={profile}
-            metrics={metrics}
-            progress={analysis.dailyProgress}
-            latestResult={latestResult}
-            measuredWeight={measuredWeight ?? 0}
-            disclaimer={analysis.disclaimer}
-            recommendations={analysis.recommendations}
-            isConnected={bluetooth.isConnected}
-            latestWeight={bluetooth.latestWeight}
-            stableWeight={bluetooth.stableWeight}
-            measurementStatus={bluetooth.measurementStatus}
-            onConnectScale={connectScale}
-            onTare={async () => {
-              const result = await bluetooth.tare();
-              showToast(result.message);
-            }}
-            onGoCapture={() => setSection("capture")}
-          />
-        ) : null}
-
-        {!debugOpen && section === "capture" ? (
-          <CaptureScreen
-            videoRef={camera.videoRef}
-            previewUrl={previewUrl}
-            note={mealNote}
-            onNoteChange={setMealNote}
-            onStartCamera={async () => {
-              try {
-                await camera.startCamera();
-              } catch (error) {
-                showToast(error instanceof Error ? error.message : "Camera failed.");
-              }
-            }}
-            onStopCamera={camera.stopCamera}
-            onAnalyzeCamera={handleAnalyzeCamera}
-            onSelectFile={handleSelectUpload}
-            onAnalyzeUpload={handleAnalyzeUpload}
-            cameraReady={Boolean(camera.stream)}
-            status={analysis.status}
-            stableWeight={bluetooth.stableWeight}
-            latestWeight={bluetooth.latestWeight}
-            result={latestResult}
-            disclaimer={analysis.disclaimer}
-          />
-        ) : null}
-
-        {!debugOpen && section === "history" ? <HistoryScreen meals={analysis.history} /> : null}
-
-        {!debugOpen && section === "profile" ? (
-          <ProfileScreen
-            profile={profile}
-            onChange={setProfile}
-            metrics={metrics}
-            onOpenDebug={() => setDebugOpen(true)}
-          />
-        ) : null}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeScreenKey}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.16, ease: "easeOut" }}
+          >
+            {activeScreen}
+          </motion.div>
+        </AnimatePresence>
 
         {debugOpen ? (
           <button
             onClick={() => setDebugOpen(false)}
             className="mt-4 w-full rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700"
           >
-            Back to app
+            {t("common.backToApp")}
           </button>
         ) : null}
 
         {!debugOpen && latestMeal ? (
           <p className="mt-4 px-1 text-xs leading-5 text-slate-400">
-            Estimated nutrition values are guidance only and may vary from the real meal.
+            {t("common.estimatedNutritionDisclaimer")}
           </p>
         ) : null}
       </MobileShell>

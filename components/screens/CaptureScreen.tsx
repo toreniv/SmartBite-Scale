@@ -6,7 +6,8 @@ import { AnalysisResultCard } from "@/components/cards/AnalysisResultCard";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field, Input } from "@/components/ui/Field";
-import type { MealAnalysisResult } from "@/lib/types";
+import { useLanguage } from "@/hooks/useLanguage";
+import type { MealAnalysisResult, NavDirection } from "@/lib/types";
 
 export function CaptureScreen({
   videoRef,
@@ -24,6 +25,7 @@ export function CaptureScreen({
   latestWeight,
   result,
   disclaimer,
+  navDirection,
 }: {
   videoRef: ComponentProps<"video">["ref"];
   previewUrl: string | null;
@@ -40,56 +42,94 @@ export function CaptureScreen({
   latestWeight: number;
   result: MealAnalysisResult | null;
   disclaimer: string;
+  navDirection: NavDirection;
 }) {
+  const { t } = useLanguage();
+
   return (
     <div className="space-y-4">
-      <Card className="overflow-hidden p-0">
+      <Card className="p-0">
         <div className="aspect-[4/5] bg-slate-950">
           {cameraReady ? (
-            <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center px-6 text-center text-white">
-              <Camera className="h-10 w-10 text-blue-300" />
-              <div className="mt-4 text-xl font-semibold">Ready to scan your meal</div>
-              <p className="mt-2 text-sm leading-6 text-white/70">
-                Start the camera for a live preview or upload a photo from your device.
-              </p>
+            <div className="h-full w-full overflow-hidden">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="h-full w-full object-cover"
+              />
             </div>
+          ) : (
+            <video
+          src="/assets/scale/scale-demo.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="h-full w-full object-cover"
+          onError={() => console.error("Video failed to load: /assets/scale/scale-demo.mp4")}
+        />
           )}
         </div>
-        <div className="border-t border-slate-100 p-5">
-          <div className="flex gap-3">
-            <Button variant="primary" fullWidth onClick={onStartCamera}>
-              <Camera className="mr-2 h-4 w-4" />
-              {cameraReady ? "Restart camera" : "Start camera"}
-            </Button>
-            <Button variant="ghost" fullWidth onClick={onStopCamera}>
-              <StopCircle className="mr-2 h-4 w-4" />
-              Stop
-            </Button>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-3xl bg-slate-50 px-4 py-4">
-              <div className="text-sm text-slate-500">Live weight</div>
-              <div className="mt-2 text-2xl font-semibold text-slate-950">{latestWeight.toFixed(1)}g</div>
+      </Card>
+
+      <div className="px-4 pt-1 text-center">
+        <h3 className="text-xl font-semibold text-slate-950">{t("capture.readyTitle")}</h3>
+        <p className="mt-2 text-sm leading-6 text-slate-600">{t("capture.readyBody")}</p>
+      </div>
+
+      <Card>
+        <div className="flex gap-3">
+          <Button variant="primary" fullWidth onClick={onStartCamera}>
+            <Camera className="mr-2 h-4 w-4" />
+            {cameraReady ? t("capture.restartCamera") : t("capture.startCamera")}
+          </Button>
+          <Button variant="ghost" fullWidth onClick={onStopCamera}>
+            <StopCircle className="mr-2 h-4 w-4" />
+            {t("capture.stop")}
+          </Button>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="rounded-3xl bg-slate-50 px-4 py-4">
+            <div className="text-sm text-slate-500">{t("dashboard.liveWeight")}</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-950">
+              {latestWeight.toFixed(1)}
+              {t("common.gramsShort")}
             </div>
-            <div className="rounded-3xl bg-slate-50 px-4 py-4">
-              <div className="text-sm text-slate-500">Stable weight</div>
-              <div className="mt-2 text-2xl font-semibold text-slate-950">{stableWeight.toFixed(1)}g</div>
+          </div>
+          <div className="rounded-3xl bg-slate-50 px-4 py-4">
+            <div className="text-sm text-slate-500">{t("dashboard.stableWeight")}</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-950">
+              {stableWeight.toFixed(1)}
+              {t("common.gramsShort")}
             </div>
           </div>
         </div>
       </Card>
 
       <Card>
-        <Field label="Meal note" helper="Optional. Add context like “salad with chicken” or “oatmeal with berries”.">
-          <Input value={note} onChange={(event) => onNoteChange(event.target.value)} placeholder="Add an optional note" />
+        <Field label={t("capture.mealNote")} helper={t("capture.mealNoteHelper")}>
+          <Input
+            value={note}
+            onChange={(event) => onNoteChange(event.target.value)}
+            placeholder={t("capture.mealNotePlaceholder")}
+          />
         </Field>
 
         <div className="mt-4 flex gap-3">
-          <Button variant="success" fullWidth onClick={onAnalyzeCamera} disabled={!cameraReady || status === "loading"}>
-            {status === "loading" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-            Capture and analyze
+          <Button
+            variant="success"
+            fullWidth
+            onClick={onAnalyzeCamera}
+            disabled={!cameraReady || status === "loading"}
+          >
+            {status === "loading" ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="mr-2 h-4 w-4" />
+            )}
+            {t("capture.captureAndAnalyze")}
           </Button>
         </div>
       </Card>
@@ -97,8 +137,10 @@ export function CaptureScreen({
       <Card>
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm font-medium text-slate-500">Upload an image</div>
-            <div className="mt-1 text-xl font-semibold text-slate-950">Analyze from your gallery</div>
+            <div className="text-sm font-medium text-slate-500">{t("capture.uploadImage")}</div>
+            <div className="mt-1 text-xl font-semibold text-slate-950">
+              {t("capture.uploadSubtitle")}
+            </div>
           </div>
           <div className="rounded-2xl bg-blue-50 p-3 text-blue-600">
             <ImagePlus className="h-5 w-5" />
@@ -108,23 +150,40 @@ export function CaptureScreen({
         <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-[28px] border border-dashed border-blue-200 bg-blue-50/60 px-4 py-8 text-center">
           <input type="file" accept="image/*" className="hidden" onChange={onSelectFile} />
           {previewUrl ? (
-            <img src={previewUrl} alt="Selected meal" className="aspect-[4/3] w-full rounded-[24px] object-cover" />
+            <img
+              src={previewUrl}
+              alt="Selected meal"
+              className="aspect-[4/3] w-full overflow-hidden rounded-[24px] object-cover"
+            />
           ) : (
             <>
               <ImagePlus className="h-8 w-8 text-blue-600" />
-              <div className="mt-3 text-sm text-slate-600">Tap to select a meal image</div>
+              <div className="mt-3 text-sm text-slate-600">{t("capture.tapToSelect")}</div>
             </>
           )}
         </label>
 
-        <Button className="mt-4" fullWidth onClick={onAnalyzeUpload} disabled={!previewUrl || status === "loading"}>
-          {status === "loading" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-          Upload and analyze
+        <Button
+          className="mt-4"
+          fullWidth
+          onClick={onAnalyzeUpload}
+          disabled={!previewUrl || status === "loading"}
+        >
+          {status === "loading" ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="mr-2 h-4 w-4" />
+          )}
+          {t("capture.uploadAndAnalyze")}
         </Button>
       </Card>
 
       {result ? (
-        <AnalysisResultCard result={result} measuredWeight={stableWeight || latestWeight} disclaimer={disclaimer} />
+        <AnalysisResultCard
+          result={result}
+          measuredWeight={stableWeight || latestWeight}
+          disclaimer={disclaimer}
+        />
       ) : null}
     </div>
   );

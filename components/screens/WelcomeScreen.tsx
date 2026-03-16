@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Bluetooth,
   BrainCircuit,
@@ -8,9 +9,15 @@ import {
   ChevronRight,
   Scale,
   Sparkles,
-  Utensils,
+  UserCircle2,
+  X,
 } from "lucide-react";
+import { AuthScreen } from "@/components/screens/AuthScreen";
 import { Button } from "@/components/ui/Button";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { useLanguage } from "@/hooks/useLanguage";
+import { getCurrentUser } from "@/lib/localAuth";
+import type { User } from "@/lib/types";
 
 function FeatureItem({
   icon,
@@ -23,14 +30,12 @@ function FeatureItem({
 }) {
   return (
     <div className="flex items-start gap-2.5">
-      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white/78 text-slate-900 shadow-[0_8px_22px_rgba(15,23,42,0.07)] backdrop-blur-md">
+      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/80 shadow-sm">
         {icon}
       </div>
       <div>
-        <div className="text-[13px] font-semibold tracking-[-0.02em] text-slate-950">
-          {title}
-        </div>
-        <div className="mt-0.5 text-[12px] leading-5 text-slate-500">{description}</div>
+        <div className="text-[12px] font-semibold tracking-tight text-slate-900">{title}</div>
+        <div className="text-[11px] leading-4 text-slate-500">{description}</div>
       </div>
     </div>
   );
@@ -39,160 +44,273 @@ function FeatureItem({
 export function WelcomeScreen({
   onConnect,
   onContinue,
+  onAuthChange,
 }: {
   onConnect: () => void;
   onContinue: () => void;
+  onAuthChange?: () => void;
 }) {
+  const { dir, t } = useLanguage();
+  const [busy, setBusy] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authOpen, setAuthOpen] = useState(false);
+  const timerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setCurrentUser(getCurrentUser());
+
+    const syncUser = () => {
+      setCurrentUser(getCurrentUser());
+    };
+
+    window.addEventListener("storage", syncUser);
+
+    return () => {
+      window.removeEventListener("storage", syncUser);
+
+      if (timerRef.current) {
+        window.clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+
+  const bannerInitial = currentUser?.name?.trim().charAt(0).toUpperCase() || "U";
+
+  const run = (action: () => void) => {
+    if (busy) {
+      return;
+    }
+
+    setBusy(true);
+    timerRef.current = window.setTimeout(() => {
+      action();
+    }, 320);
+  };
+
   return (
-    <div className="relative mx-auto h-[100dvh] max-w-[430px] overflow-hidden px-5 pb-4 pt-4">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(148,163,184,0.08),transparent_24%),radial-gradient(circle_at_top_right,rgba(99,102,241,0.18),transparent_28%),linear-gradient(180deg,#f8fbff_0%,#eef4ff_48%,#eaf1ff_100%)]" />
-      <div className="pointer-events-none absolute left-[-12%] top-[16%] h-40 w-40 rounded-full bg-cyan-200/20 blur-3xl" />
-      <div className="pointer-events-none absolute right-[-18%] top-[8%] h-56 w-56 rounded-full bg-indigo-200/25 blur-3xl" />
+    <div
+      dir={dir}
+      className="relative mx-auto flex h-[100dvh] max-w-[430px] flex-col overflow-hidden bg-[linear-gradient(180deg,#f0f5ff_0%,#e8f0fe_100%)] px-5"
+    >
+      <div className="pointer-events-none absolute right-[-15%] top-[5%] h-52 w-52 rounded-full bg-indigo-200/30 blur-3xl" />
+      <div className="pointer-events-none absolute left-[-10%] top-[30%] h-40 w-40 rounded-full bg-cyan-200/20 blur-3xl" />
 
-      <div className="relative flex h-full flex-col">
-        <div className="shrink-0 pt-1">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/72 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-600 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md">
-            <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-            Smart Nutrition
-          </div>
-
-          <div className="mt-4 max-w-[300px]">
-            <h1 className="text-[2.85rem] font-semibold leading-[0.95] tracking-[-0.06em] text-slate-950">
-              SmartBite
-              <span className="block text-slate-950/92">Scale</span>
-            </h1>
-            <p className="mt-2.5 text-[1.08rem] font-medium tracking-[-0.03em] text-slate-800">
-              Know what you&apos;re eating.
-            </p>
-            <p className="mt-1.5 max-w-[260px] text-[13px] leading-5 text-slate-500">
-              Real-time nutrition guidance from weight, meal imagery, and AI.
-            </p>
-          </div>
+      <div className="relative flex shrink-0 items-center justify-between pt-3 pb-1.5">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 shadow-sm backdrop-blur-md">
+          <Sparkles className="h-3 w-3 text-blue-600" />
+          {t("common.smartNutrition")}
         </div>
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher />
+          <button
+            type="button"
+            onClick={() => setAuthOpen(true)}
+            className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/78 shadow-sm ring-1 ring-white/80 backdrop-blur-md"
+            aria-label={currentUser ? "Open account" : "Open sign in"}
+          >
+            {currentUser ? (
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[linear-gradient(135deg,#6366f1,#4338ca)] text-sm font-semibold text-white shadow-md">
+                {bannerInitial}
+              </div>
+            ) : (
+              <>
+                <UserCircle2 className="h-6 w-6 text-slate-600" />
+                <span className="absolute bottom-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-white" />
+              </>
+            )}
+          </button>
+        </div>
+      </div>
 
-        <div className="relative mt-5 shrink overflow-hidden">
-          <div className="absolute inset-x-5 top-4 h-40 rounded-[36px] bg-[linear-gradient(160deg,rgba(37,99,235,0.16),rgba(255,255,255,0.16),rgba(79,70,229,0.16))] blur-2xl" />
+      <div className="relative shrink-0 pt-0.5">
+        <h1 className="text-[2.4rem] font-semibold leading-[1.0] tracking-[-0.05em] text-slate-950">
+          SmartBite
+          <br />
+          <span className="text-slate-950/70">Scale.</span>
+        </h1>
+        <p className="mt-1 text-[0.9rem] text-slate-600">{t("welcome.subtitle")}</p>
+      </div>
 
-          <div className="relative overflow-hidden rounded-[30px] bg-[linear-gradient(180deg,rgba(255,255,255,0.90),rgba(244,247,255,0.80))] p-4 shadow-[0_24px_60px_rgba(30,64,175,0.14)] ring-1 ring-white/80 backdrop-blur-xl">
-            <div className="absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.18),transparent_72%)]" />
+      <div className="relative mt-2.5 min-h-0 flex-1">
+        <div className="h-full overflow-hidden rounded-[28px] bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(240,247,255,0.82))] shadow-[0_20px_50px_rgba(30,64,175,0.12)] ring-1 ring-white/80 backdrop-blur-xl">
+          <div className="flex items-start justify-between gap-2 px-4 pt-3">
+            <div>
+              <div className="text-[9px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                {t("common.weightPhotoAi")}
+              </div>
+              <div className="mt-0.5 text-[13px] font-semibold tracking-tight text-slate-950">
+                {t("welcome.heroTitle")}
+              </div>
+            </div>
+            <div className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+              {t("common.live")}
+            </div>
+          </div>
 
-            <div className="relative flex items-start justify-between gap-3">
+          <div className="mx-4 mt-2.5 rounded-[20px] bg-[linear-gradient(180deg,#111827,#1e293b)] px-3 py-2.5">
+            <div className="flex items-center justify-between">
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-                  Weight. Photo. AI.
+                <div className="text-[9px] uppercase tracking-[0.2em] text-slate-400">
+                  {t("welcome.scaleReading")}
                 </div>
-                <div className="mt-1.5 text-base font-semibold tracking-[-0.03em] text-slate-950">
-                  One clear nutrition signal
-                </div>
-              </div>
-              <div className="rounded-full bg-emerald-400/16 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                Live
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-[26px] bg-[linear-gradient(180deg,#111827,#1f2937)] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-[10px] uppercase tracking-[0.22em] text-slate-400">
-                    Scale reading
-                  </div>
-                  <div className="mt-1 text-[1.7rem] font-semibold tracking-[-0.05em] text-white">
-                    186 g
-                  </div>
-                </div>
-                <div className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-200">
-                  Stable serving
+                <div className="mt-0.5 text-[1.3rem] font-semibold tracking-tight text-white">
+                  186 {t("common.gramsShort")}
                 </div>
               </div>
-
-              <div className="mt-3 grid grid-cols-[56px_1fr] gap-3 rounded-[22px] bg-white/8 p-3">
-                <div className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-[linear-gradient(160deg,#fde68a,#fb923c)] text-slate-900">
-                  <Utensils className="h-6 w-6" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-400">
-                    <Camera className="h-3.5 w-3.5" />
-                    Meal image matched
-                  </div>
-                  <div className="mt-1.5 text-[15px] font-semibold tracking-[-0.03em] text-white">
-                    Salmon bowl
-                  </div>
-                  <div className="mt-0.5 text-[13px] text-slate-300">
-                    Portion refined using scale data
-                  </div>
-                </div>
+              <div className="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-300">
+                {t("welcome.stableServing")}
               </div>
             </div>
 
-            <div className="relative mt-3 grid grid-cols-2 gap-2.5">
-              <div className="rounded-[22px] bg-white/78 p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.07)]">
-                <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">
-                  <BrainCircuit className="h-3.5 w-3.5 text-indigo-600" />
-                  AI estimate
-                </div>
-                <div className="mt-1.5 text-[1.7rem] font-semibold tracking-[-0.05em] text-slate-950">
-                  428
-                </div>
-                <div className="mt-0.5 text-[13px] text-slate-500">calories</div>
-              </div>
+            <div className="flex items-center justify-center py-1.5">
+              <img
+                src="/assets/scale/sbs3.png"
+                alt="Salmon & Avocado Bowl on SmartBite Scale"
+                className="w-full h-[160px] rounded-[14px] object-cover select-none"
+                style={{
+                  filter: "brightness(0.92) saturate(1.05)",
+                }}
+                draggable={false}
+              />
+            </div>
 
-              <div className="rounded-[22px] bg-white/78 p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.07)]">
-                <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">
-                  <Scale className="h-3.5 w-3.5 text-blue-600" />
-                  Macro focus
+            <div className="grid grid-cols-[36px_1fr] gap-2 rounded-[16px] bg-white/8 p-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-[linear-gradient(160deg,#fde68a,#fb923c)]">
+                <Scale className="h-4 w-4 text-slate-900" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1 text-[9px] uppercase tracking-wide text-slate-400">
+                  <Camera className="h-2.5 w-2.5" />
+                  {t("welcome.mealImageMatched")}
                 </div>
-                <div className="mt-1.5 text-[1.7rem] font-semibold tracking-[-0.05em] text-slate-950">
-                  34g
+                <div className="mt-0.5 text-[12px] font-semibold text-white">
+                  Salmon &amp; Avocado Bowl
                 </div>
-                <div className="mt-0.5 text-[13px] text-slate-500">protein</div>
+                <div className="text-[10px] text-slate-400">AI-powered nutritional analysis</div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="mt-5 grid shrink-0 grid-cols-1 gap-3">
-          <FeatureItem
-            icon={<Scale className="h-5 w-5 text-blue-600" />}
-            title="Live weight tracking"
-            description="Stable serving detection built in."
-          />
-          <FeatureItem
-            icon={<Camera className="h-5 w-5 text-amber-500" />}
-            title="Photo-based meal analysis"
-            description="Meal recognition from a single photo."
-          />
-          <FeatureItem
-            icon={<BrainCircuit className="h-5 w-5 text-indigo-600" />}
-            title="Smart calorie and macro guidance"
-            description="Grounded daily targets and nutrition insight."
-          />
-        </div>
+          <div className="mx-4 mt-2 grid grid-cols-2 gap-2">
+            <div className="rounded-[16px] bg-white/80 px-3 py-2.5 shadow-sm">
+              <div className="flex items-center gap-1 text-[9px] uppercase tracking-wide text-slate-400">
+                <BrainCircuit className="h-2.5 w-2.5 text-indigo-500" />
+                {t("welcome.aiEstimate")}
+              </div>
+              <div className="mt-1 text-[1.3rem] font-semibold tracking-tight text-slate-950">
+                580
+              </div>
+              <div className="text-[10px] text-slate-500">{t("common.calories")}</div>
+            </div>
+            <div className="rounded-[16px] bg-white/80 px-3 py-2.5 shadow-sm">
+              <div className="flex items-center gap-1 text-[9px] uppercase tracking-wide text-slate-400">
+                <Scale className="h-2.5 w-2.5 text-blue-500" />
+                {t("welcome.macroFocus")}
+              </div>
+              <div className="mt-1 text-[1.3rem] font-semibold tracking-tight text-slate-950">
+                42g
+              </div>
+              <div className="text-[10px] text-slate-500">{t("common.protein")}</div>
+            </div>
+          </div>
 
-        <div className="mt-auto shrink-0 pt-5">
-          <Button
-            fullWidth
-            onClick={onConnect}
-            className="h-14 rounded-[26px] bg-[linear-gradient(135deg,#1d4ed8_0%,#4338ca_55%,#6366f1_100%)] px-6 text-base font-semibold text-white shadow-[0_22px_46px_rgba(59,130,246,0.30)] hover:bg-[linear-gradient(135deg,#1e40af_0%,#3730a3_55%,#4f46e5_100%)]"
-          >
-            <Bluetooth className="mr-2.5 h-5 w-5" />
-            Connect your scale
-          </Button>
-
-          <Button
-            variant="secondary"
-            fullWidth
-            onClick={onContinue}
-            className="mt-3 h-12 rounded-[22px] bg-white/60 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.05)] backdrop-blur-md"
-          >
-            Try demo mode
-            <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
-
-          <div className="pt-3 text-center text-xs tracking-[0.08em] text-slate-400">
-            SmartBite Nutrition
+          <div className="mx-4 mt-2.5 mb-3 grid gap-2">
+            <FeatureItem
+              icon={<Scale className="h-4 w-4 text-blue-600" />}
+              title={t("welcome.featureLiveTitle")}
+              description={t("welcome.featureLiveBody")}
+            />
+            <FeatureItem
+              icon={<Camera className="h-4 w-4 text-amber-500" />}
+              title={t("welcome.featurePhotoTitle")}
+              description={t("welcome.featurePhotoBody")}
+            />
+            <FeatureItem
+              icon={<BrainCircuit className="h-4 w-4 text-indigo-500" />}
+              title={t("welcome.featureGuidanceTitle")}
+              description={t("welcome.featureGuidanceBody")}
+            />
           </div>
         </div>
       </div>
+
+      <div className="relative shrink-0 pb-5 pt-2.5">
+        <Button
+          fullWidth
+          onClick={() => run(onConnect)}
+          disabled={busy}
+          className="h-13 rounded-[24px] bg-[linear-gradient(135deg,#1d4ed8,#4338ca,#6366f1)] text-[15px] font-semibold text-white shadow-[0_18px_40px_rgba(59,130,246,0.28)]"
+        >
+          <Bluetooth className="mr-2 h-5 w-5" />
+          {t("common.connectScale")}
+        </Button>
+        <Button
+          variant="secondary"
+          fullWidth
+          onClick={() => run(onContinue)}
+          disabled={busy}
+          className="mt-2 h-11 rounded-[20px] bg-white/60 text-slate-700 backdrop-blur-md"
+        >
+          {t("common.tryDemoMode")}
+          <ChevronRight className="ml-1.5 h-4 w-4" />
+        </Button>
+        <p className="mt-2 text-center text-[10px] tracking-wide text-slate-400">
+          {t("common.productName")}
+        </p>
+      </div>
+
+      <AnimatePresence>
+        {authOpen ? (
+          <>
+            <motion.button
+              type="button"
+              aria-label="Close account sheet"
+              className="absolute inset-0 bg-slate-950/28"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setAuthOpen(false)}
+            />
+            <motion.div
+              className="absolute inset-x-0 bottom-0 z-10 rounded-t-[32px] bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(239,246,255,0.96))] px-4 pb-6 pt-3 shadow-[0_-24px_60px_rgba(15,23,42,0.18)]"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 220, damping: 28 }}
+            >
+              <div className="mx-auto h-1.5 w-14 rounded-full bg-slate-300" />
+              <div className="mt-3 flex items-center justify-between px-1">
+                <div>
+                  <div className="text-sm font-semibold text-slate-950">Your account</div>
+                  <div className="text-xs text-slate-500">
+                    Sign in to save your profile on this device.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAuthOpen(false)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500"
+                  aria-label="Close"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="mt-4 max-h-[70vh] overflow-y-auto">
+                <AuthScreen
+                  embedded
+                  onAuth={() => {
+                    setCurrentUser(getCurrentUser());
+                    setAuthOpen(false);
+                    onAuthChange?.();
+                  }}
+                />
+              </div>
+            </motion.div>
+          </>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }

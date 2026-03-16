@@ -3,12 +3,15 @@
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field, Input, Select } from "@/components/ui/Field";
-import {
-  ACTIVITY_LEVELS,
-  GOAL_DESCRIPTIONS,
-  GOAL_LABELS,
-} from "@/lib/constants";
-import type { HealthMetrics, Sex, UserProfile } from "@/lib/types";
+import { useLanguage } from "@/hooks/useLanguage";
+import type {
+  ActivityLevel,
+  GoalType,
+  HealthMetrics,
+  NavDirection,
+  Sex,
+  UserProfile,
+} from "@/lib/types";
 
 function MetricTile({
   label,
@@ -33,12 +36,22 @@ export function ProfileScreen({
   metrics,
   onChange,
   onOpenDebug,
+  userName,
+  onSignOut,
+  navDirection,
 }: {
   profile: UserProfile;
   metrics: HealthMetrics;
   onChange: (profile: UserProfile) => void;
   onOpenDebug: () => void;
+  userName?: string;
+  onSignOut: () => void;
+  navDirection: NavDirection;
 }) {
+  const { t } = useLanguage();
+  const bannerName = userName?.trim() || "User";
+  const bannerInitial = bannerName.charAt(0).toUpperCase();
+
   const update = <K extends keyof UserProfile>(key: K, value: UserProfile[K]) => {
     onChange({ ...profile, [key]: value });
   };
@@ -46,20 +59,38 @@ export function ProfileScreen({
   const targetDelta = (profile.targetWeightKg ?? profile.weightKg) - profile.weightKg;
   const targetSummary =
     targetDelta === 0
-      ? "Target weight matches your current weight."
-      : `${Math.abs(targetDelta).toFixed(1)} kg ${targetDelta > 0 ? "above" : "below"} your current weight.`;
+      ? t("profile.targetWeightSame")
+      : t(targetDelta > 0 ? "profile.targetWeightAbove" : "profile.targetWeightBelow", {
+          value: Math.abs(targetDelta).toFixed(1),
+        });
+  const goalLabel = t(`common.goalLabel.${profile.goalType}`);
+  const activityOptions: ActivityLevel[] = [
+    "sedentary",
+    "light",
+    "moderate",
+    "active",
+    "very-active",
+  ];
+  const goalOptions: GoalType[] = ["lose-weight", "maintain", "gain-muscle"];
 
   return (
     <div className="space-y-4">
+      <div className="mx-1 mb-4 flex items-center gap-3 rounded-[20px] bg-white/70 px-4 py-3 shadow-sm backdrop-blur-md">
+        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[linear-gradient(135deg,#6366f1,#4338ca)] text-white text-lg font-semibold shadow-md">
+          {bannerInitial}
+        </div>
+        <div>
+          <div className="text-[13px] font-semibold text-slate-950">{bannerName}</div>
+          <div className="text-[11px] text-slate-500">Personal nutrition profile</div>
+        </div>
+      </div>
       <Card className="overflow-hidden bg-[linear-gradient(145deg,rgba(239,246,255,0.98),rgba(255,255,255,0.95))]">
-        <div className="text-sm font-medium text-blue-600">Health profile</div>
-        <div className="mt-1 text-2xl font-semibold text-slate-950">Personalize your daily goals</div>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
-          Stored locally for now. Adjust the values and the calorie, protein, and pace targets update immediately.
-        </p>
+        <div className="text-sm font-medium text-blue-600">{t("profile.eyebrow")}</div>
+        <div className="mt-1 text-2xl font-semibold text-slate-950">{t("profile.title")}</div>
+        <p className="mt-2 text-sm leading-6 text-slate-600">{t("profile.body")}</p>
 
         <div className="mt-5 grid grid-cols-2 gap-3">
-          <Field label="Age">
+          <Field label={t("profile.age")}>
             <Input
               type="number"
               min={16}
@@ -68,13 +99,13 @@ export function ProfileScreen({
               onChange={(e) => update("age", Number(e.target.value) || 0)}
             />
           </Field>
-          <Field label="Sex">
+          <Field label={t("profile.sex")}>
             <Select value={profile.sex} onChange={(e) => update("sex", e.target.value as Sex)}>
-              <option value="female">Female</option>
-              <option value="male">Male</option>
+              <option value="female">{t("common.sexLabel.female")}</option>
+              <option value="male">{t("common.sexLabel.male")}</option>
             </Select>
           </Field>
-          <Field label="Height (cm)">
+          <Field label={t("profile.heightCm")}>
             <Input
               type="number"
               min={120}
@@ -83,7 +114,7 @@ export function ProfileScreen({
               onChange={(e) => update("heightCm", Number(e.target.value) || 0)}
             />
           </Field>
-          <Field label="Weight (kg)">
+          <Field label={t("profile.weightKg")}>
             <Input
               type="number"
               min={35}
@@ -93,28 +124,28 @@ export function ProfileScreen({
               onChange={(e) => update("weightKg", Number(e.target.value) || 0)}
             />
           </Field>
-          <Field label="Activity" helper="Used to estimate how much energy you burn in a typical day.">
+          <Field label={t("profile.activity")} helper={t("profile.activityHelper")}>
             <Select
               value={profile.activityLevel}
               onChange={(e) =>
                 update("activityLevel", e.target.value as UserProfile["activityLevel"])
               }
             >
-              {Object.entries(ACTIVITY_LEVELS).map(([value, config]) => (
+              {activityOptions.map((value) => (
                 <option key={value} value={value}>
-                  {config.label}
+                  {t(`common.activityLabel.${value}`)}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field label="Goal" helper={GOAL_DESCRIPTIONS[profile.goalType]}>
+          <Field label={t("profile.goal")} helper={t(`common.goalDescription.${profile.goalType}`)}>
             <Select
               value={profile.goalType}
               onChange={(e) => update("goalType", e.target.value as UserProfile["goalType"])}
             >
-              {Object.entries(GOAL_LABELS).map(([value, label]) => (
+              {goalOptions.map((value) => (
                 <option key={value} value={value}>
-                  {label}
+                  {t(`common.goalLabel.${value}`)}
                 </option>
               ))}
             </Select>
@@ -123,8 +154,8 @@ export function ProfileScreen({
 
         <div className="mt-4">
           <Field
-            label="Target weight (optional)"
-            helper={`${targetSummary} This is used as a planning reference, not a strict rule.`}
+            label={t("profile.targetWeight")}
+            helper={`${targetSummary} ${t("profile.targetWeightHelperSuffix")}`}
           >
             <Input
               type="number"
@@ -138,72 +169,82 @@ export function ProfileScreen({
         </div>
 
         <Button variant="ghost" className="mt-4" onClick={onOpenDebug}>
-          Open debug tools
+          {t("common.openDebugTools")}
         </Button>
       </Card>
 
       <Card>
-        <div className="text-sm font-medium text-slate-500">Calculated health metrics</div>
+        <div className="text-sm font-medium text-slate-500">{t("profile.metricsTitle")}</div>
         <div className="mt-4 grid grid-cols-2 gap-3">
           <MetricTile
-            label="BMI"
+            label={t("profile.bmi")}
             value={`${metrics.bmi}`}
-            hint={`${metrics.bmiLabel} range`}
+            hint={t(`common.bmiLabel.${metrics.bmiLabel}`)}
           />
           <MetricTile
-            label="Healthy range"
+            label={t("profile.healthyRange")}
             value={`${metrics.healthyWeightRange.minKg}-${metrics.healthyWeightRange.maxKg} kg`}
-            hint="Estimated from BMI 18.5-24.9"
+            hint={t("profile.healthyRangeHint")}
           />
           <MetricTile
-            label="BMR"
-            value={`${metrics.bmr} kcal`}
-            hint="Approximate resting energy use"
+            label={t("profile.bmr")}
+            value={`${metrics.bmr} ${t("common.kcal")}`}
+            hint={t("profile.bmrHint")}
           />
           <MetricTile
-            label="TDEE"
-            value={`${metrics.tdee} kcal`}
-            hint="Estimated total daily energy burn"
+            label={t("profile.tdee")}
+            value={`${metrics.tdee} ${t("common.kcal")}`}
+            hint={t("profile.tdeeHint")}
           />
         </div>
       </Card>
 
       <Card>
-        <div className="text-sm font-medium text-slate-500">Daily plan</div>
+        <div className="text-sm font-medium text-slate-500">{t("profile.dailyPlan")}</div>
         <div className="mt-1 text-xl font-semibold text-slate-950">
-          {GOAL_LABELS[profile.goalType]} with simple guardrails
+          {t("profile.dailyPlanTitle", { goal: goalLabel })}
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3">
           <MetricTile
-            label="Calorie target"
-            value={`${metrics.dailyCalorieTarget} kcal`}
+            label={t("profile.calorieTarget")}
+            value={`${metrics.dailyCalorieTarget} ${t("common.kcal")}`}
             hint={
               metrics.calorieAdjustment === 0
-                ? "Matches your estimated maintenance"
-                : `${metrics.calorieAdjustment > 0 ? "+" : ""}${metrics.calorieAdjustment} kcal vs maintenance`
+                ? t("profile.calorieTargetMaintenance")
+                : t("profile.calorieTargetDelta", { value: metrics.calorieAdjustment })
             }
           />
           <MetricTile
-            label="Protein goal"
-            value={`${metrics.proteinTarget} g`}
-            hint="Set higher than average to support satiety and muscle retention"
+            label={t("profile.proteinGoal")}
+            value={`${metrics.proteinTarget} ${t("common.gramsShort")}`}
+            hint={t("profile.proteinGoalHint")}
           />
           <MetricTile
-            label="Water target"
-            value={`${metrics.waterTargetLiters} L`}
-            hint="A basic hydration estimate"
+            label={t("profile.waterTarget")}
+            value={`${metrics.waterTargetLiters} ${t("common.litersShort")}`}
+            hint={t("profile.waterTargetHint")}
           />
           <MetricTile
-            label="Expected pace"
-            value={metrics.goalPace.weeklyDeltaKg === 0 ? "Maintain" : metrics.goalPace.summary}
+            label={t("profile.expectedPace")}
+            value={
+              metrics.goalPace.weeklyDeltaKg === 0
+                ? t("profile.expectedPaceMaintain")
+                : metrics.goalPace.summary
+            }
             hint={
               metrics.goalPace.weeklyDeltaKg === 0
-                ? "No intentional weekly weight change built in"
-                : `${Math.abs(metrics.goalPace.monthlyDeltaKg)} kg per month if your intake stays close`
+                ? t("profile.expectedPaceMaintainHint")
+                : t("profile.expectedPaceMonthly", {
+                    value: Math.abs(metrics.goalPace.monthlyDeltaKg),
+                  })
             }
           />
         </div>
       </Card>
+
+      <Button variant="secondary" fullWidth onClick={onSignOut}>
+        Sign out
+      </Button>
     </div>
   );
 }

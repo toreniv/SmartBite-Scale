@@ -10,9 +10,11 @@ export type ActivityLevel =
 
 export type GoalType = "lose-weight" | "maintain" | "gain-muscle";
 
-export type AppPhase = "welcome" | "connect" | "app";
+export type AppPhase = "auth" | "welcome" | "connect" | "app";
 
 export type AppSection = "home" | "capture" | "history" | "profile" | "debug";
+
+export type NavDirection = "forward" | "backward" | "none";
 
 export type Screen =
   | "welcome"
@@ -34,6 +36,13 @@ export type PermissionStateLike = "granted" | "denied" | "prompt" | "unknown";
 export type LEDColor = "RED" | "GREEN" | "BLUE" | "YELLOW" | "OFF";
 
 export type MeasurementStatus = "disconnected" | "idle" | "measuring" | "stable";
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+}
 
 export interface UserProfile {
   age: number;
@@ -106,6 +115,8 @@ export interface MealAnalysisResult {
   confidence: number;
   explanation: string;
   provider: AnalysisProvider;
+  usedFallback?: boolean;
+  attempts?: AnalyzeMealProviderAttempt[];
 }
 
 export interface MealHistoryItem extends MealAnalysisResult {

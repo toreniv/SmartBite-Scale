@@ -27,7 +27,7 @@ export function LanguageSwitcher() {
         }`}
         aria-label={t("common.hebrew")}
       >
-        עב
+        HE
       </button>
     </div>
   );

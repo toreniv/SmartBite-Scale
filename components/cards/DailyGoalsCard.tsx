@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Droplets, Flame, ShieldCheck, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { useLanguage } from "@/hooks/useLanguage";
 import type { DailyProgress, HealthMetrics, UserProfile } from "@/lib/types";
 
 function GoalRow({
@@ -37,22 +38,29 @@ export function DailyGoalsCard({
   metrics: HealthMetrics;
   progress: DailyProgress;
 }) {
+  const { t } = useLanguage();
   const calorieStatus =
     progress.remainingCalories >= 0
-      ? `${progress.remainingCalories} kcal left today`
-      : `${Math.abs(progress.remainingCalories)} kcal above target`;
+      ? t("dashboard.calorieHintLeft", { value: progress.remainingCalories })
+      : t("dashboard.calorieHintAbove", { value: Math.abs(progress.remainingCalories) });
   const proteinGap = Math.max(metrics.proteinTarget - progress.macros.protein.consumed, 0);
+  const goalTitleKey =
+    profile.goalType === "gain-muscle"
+      ? "dashboard.planMuscle"
+      : profile.goalType === "lose-weight"
+        ? "dashboard.planLoss"
+        : "dashboard.planMaintain";
 
   return (
     <Card className="overflow-hidden bg-[linear-gradient(145deg,rgba(255,247,237,0.95),rgba(255,255,255,0.96))]">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-medium text-orange-600">Daily goals</div>
+          <div className="text-sm font-medium text-orange-600">{t("dashboard.dailyGoals")}</div>
           <div className="mt-1 text-xl font-semibold text-slate-950">
-            Built around your {profile.goalType === "gain-muscle" ? "muscle-gain" : profile.goalType === "lose-weight" ? "fat-loss" : "maintenance"} plan
+            {t(goalTitleKey)}
           </div>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            Simple targets based on your body size, activity, and selected goal.
+            {t("dashboard.dailyGoalsBody")}
           </p>
         </div>
         <div className="rounded-3xl bg-white p-3 text-orange-500 shadow-sm">
@@ -63,26 +71,34 @@ export function DailyGoalsCard({
       <div className="mt-5 grid grid-cols-2 gap-3">
         <GoalRow
           icon={<Flame className="h-4 w-4" />}
-          label="Calories"
+          label={t("common.calories")}
           value={`${metrics.dailyCalorieTarget}`}
           hint={calorieStatus}
         />
         <GoalRow
           icon={<TrendingUp className="h-4 w-4" />}
-          label="Protein"
-          value={`${metrics.proteinTarget} g`}
-          hint={proteinGap > 0 ? `${proteinGap} g still recommended today` : "Protein target reached"}
+          label={t("common.protein")}
+          value={`${metrics.proteinTarget} ${t("common.gramsShort")}`}
+          hint={
+            proteinGap > 0
+              ? t("dashboard.proteinHintLeft", { value: proteinGap })
+              : t("dashboard.proteinHintDone")
+          }
         />
         <GoalRow
           icon={<Droplets className="h-4 w-4" />}
-          label="Water"
-          value={`${metrics.waterTargetLiters} L`}
-          hint="Basic hydration target for a normal day"
+          label={t("common.water")}
+          value={`${metrics.waterTargetLiters} ${t("common.litersShort")}`}
+          hint={t("dashboard.waterHint")}
         />
         <GoalRow
           icon={<TrendingUp className="h-4 w-4" />}
-          label="Goal pace"
-          value={metrics.goalPace.weeklyDeltaKg === 0 ? "Steady" : `${Math.abs(metrics.goalPace.weeklyDeltaKg)} kg/wk`}
+          label={t("common.goalPace")}
+          value={
+            metrics.goalPace.weeklyDeltaKg === 0
+              ? t("dashboard.steady")
+              : `${Math.abs(metrics.goalPace.weeklyDeltaKg)} kg/wk`
+          }
           hint={metrics.goalPace.summary}
         />
       </div>

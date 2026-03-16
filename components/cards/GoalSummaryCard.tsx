@@ -3,9 +3,11 @@
 import { Flame, Target } from "lucide-react";
 import { RingProgress } from "@/components/charts/RingProgress";
 import { Card } from "@/components/ui/Card";
+import { useLanguage } from "@/hooks/useLanguage";
 import type { DailyProgress } from "@/lib/types";
 
 export function GoalSummaryCard({ progress }: { progress: DailyProgress }) {
+  const { t } = useLanguage();
   const remainingLabel =
     progress.remainingCalories >= 0
       ? `${progress.remainingCalories}`
@@ -15,7 +17,7 @@ export function GoalSummaryCard({ progress }: { progress: DailyProgress }) {
     <Card className="overflow-hidden bg-[linear-gradient(160deg,rgba(219,234,254,0.95),rgba(255,255,255,0.9))]">
       <div className="flex items-start justify-between">
         <div>
-          <div className="text-sm font-medium text-slate-500">Daily calorie goal</div>
+          <div className="text-sm font-medium text-slate-500">{t("dashboard.dailyCalorieGoal")}</div>
           <div className="mt-1 text-3xl font-semibold text-slate-950">
             {progress.goalCalories}
           </div>
@@ -29,8 +31,8 @@ export function GoalSummaryCard({ progress }: { progress: DailyProgress }) {
         <RingProgress
           value={progress.consumedCalories}
           total={progress.goalCalories}
-          label="Consumed today"
-          detail={`${progress.consumedCalories} kcal`}
+          label={t("dashboard.consumedToday")}
+          detail={`${progress.consumedCalories} ${t("common.kcal")}`}
         />
       </div>
 
@@ -38,14 +40,16 @@ export function GoalSummaryCard({ progress }: { progress: DailyProgress }) {
         <div className="rounded-3xl bg-white/70 px-4 py-4">
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <Flame className="h-4 w-4 text-orange-500" />
-            {progress.remainingCalories >= 0 ? "Remaining" : "Over target"}
+            {progress.remainingCalories >= 0
+              ? t("dashboard.remaining")
+              : t("dashboard.overTarget")}
           </div>
           <div className="mt-2 text-xl font-semibold text-slate-950">
             {remainingLabel}
           </div>
         </div>
         <div className="rounded-3xl bg-white/70 px-4 py-4">
-          <div className="text-sm text-slate-500">Meals logged</div>
+          <div className="text-sm text-slate-500">{t("common.mealsLogged")}</div>
           <div className="mt-2 text-xl font-semibold text-slate-950">{progress.mealsLogged}</div>
         </div>
       </div>

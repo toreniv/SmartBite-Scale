@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SmartBite Scale</string>
+    <string name="title_activity_main">SmartBite Scale</string>
+    <string name="package_name">com.smartbite.scale</string>
+    <string name="custom_url_scheme">com.smartbite.scale</string>
+</resources>
