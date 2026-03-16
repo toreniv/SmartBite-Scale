@@ -3,11 +3,22 @@
 # dependencies
 node_modules/
 
+# frontend build output
+.next/
+out/
+
 # Expo
 .expo/
 dist/
 web-build/
 expo-env.d.ts
+
+# PlatformIO
+.pio-core/
+firmware/arduino-mega-hc06/.pio/
+
+# VS Code
+.vscode/
 
 # Native
 *.orig.*
@@ -30,6 +41,11 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 .env*.local
 
 # typescript
