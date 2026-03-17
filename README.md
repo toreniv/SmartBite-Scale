@@ -64,16 +64,16 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ## 🏗️ Tech Stack
 
-| Layer      | Technology                 |
-| ---------- | -------------------------- |
-| Framework  | Next.js 14 (static export) |
-| UI         | React + Tailwind CSS       |
-| Animations | Framer Motion              |
-| AI         | Google Gemini 1.5 Flash    |
-| Bluetooth  | Web Bluetooth API          |
-| Hardware   | ESP32 + HX711 load cell    |
-| Storage    | localStorage               |
-| Mobile     | Capacitor (iOS / Android)  |
+| Layer      | Technology                         |
+| ---------- | --------------------------         |
+| Framework  | Next.js 14 (static export)         |
+| UI         | React + Tailwind CSS               |
+| Animations | Framer Motion                      |
+| AI         | Google Gemini 1.5 Flash            |
+| Bluetooth  | Web Bluetooth API                  |
+| Hardware   | Arduino Mega + HX711 load cell     |
+| Storage    | localStorage                       |
+| Mobile     | Capacitor (iOS / Android)          |
 
 
 ---
@@ -81,7 +81,7 @@ Open [http://localhost:3000](http://localhost:3000)
 ## 🔧 Hardware
 
 The physical scale is built with:
-- **ESP32** microcontroller with Bluetooth LE
+- **Arduino Mega** microcontroller with Bluetooth LE
 - **HX711** 24-bit ADC for precise weight measurement
 - Custom 3D-printed tray housing
 
