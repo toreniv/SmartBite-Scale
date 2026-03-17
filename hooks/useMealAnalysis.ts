@@ -128,12 +128,17 @@ export function useMealAnalysis(
     }
   };
 
+  const removeMeal = (mealId: string) => {
+    setHistory((current) => current.filter((meal) => meal.id !== mealId));
+  };
+
   return {
     analyzeImage,
     dailyProgress,
     disclaimer,
     error,
     history,
+    removeMeal,
     recommendations,
     result,
     status,

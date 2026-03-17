@@ -10,6 +10,7 @@ import { CaptureScreen } from "@/components/screens/CaptureScreen";
 import { DashboardScreen } from "@/components/screens/DashboardScreen";
 import { DebugScreen } from "@/components/screens/DebugScreen";
 import { HistoryScreen } from "@/components/screens/HistoryScreen";
+import { AuthScreen } from "@/components/screens/AuthScreen";
 import { ProfileScreen } from "@/components/screens/ProfileScreen";
 import { WelcomeScreen } from "@/components/screens/WelcomeScreen";
 import { Card } from "@/components/ui/Card";
@@ -18,7 +19,7 @@ import { useCamera } from "@/hooks/useCamera";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useMealAnalysis } from "@/hooks/useMealAnalysis";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { getCurrentUser, signOut as clearCurrentSession } from "@/lib/localAuth";
+import { getCurrentUser } from "@/lib/localAuth";
 import type { AppPhase, AppSection, NavDirection, User } from "@/lib/types";
 
 const TAB_ORDER: AppSection[] = ["home", "capture", "history", "profile"];
@@ -34,6 +35,7 @@ export function SmartBiteApp() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [mealNote, setMealNote] = useState("");
   const [toast, setToast] = useState("");
+  const [profileAuthOpen, setProfileAuthOpen] = useState(false);
 
   const bluetooth = useBluetoothScale();
   const camera = useCamera();
@@ -42,6 +44,16 @@ export function SmartBiteApp() {
 
   useEffect(() => {
     setCurrentUser(getCurrentUser());
+
+    const syncUser = () => {
+      setCurrentUser(getCurrentUser());
+    };
+
+    window.addEventListener("storage", syncUser);
+
+    return () => {
+      window.removeEventListener("storage", syncUser);
+    };
   }, []);
 
   useEffect(() => {
@@ -85,11 +97,12 @@ export function SmartBiteApp() {
 
   const handleAuthSuccess = () => {
     setCurrentUser(getCurrentUser());
+    setProfileAuthOpen(false);
   };
 
   const handleSignOut = () => {
-    clearCurrentSession();
     setCurrentUser(null);
+    setProfileAuthOpen(false);
   };
 
   const handleSectionChange = (newSection: AppSection) => {
@@ -105,6 +118,10 @@ export function SmartBiteApp() {
 
     setNavDirection(direction);
     setSection(newSection);
+
+    if (newSection !== "profile") {
+      setProfileAuthOpen(false);
+    }
   };
 
   const connectScale = async () => {
@@ -175,7 +192,11 @@ export function SmartBiteApp() {
         grams: bluetooth.lastServingEvent.grams,
       })
     : t("common.none");
-  const activeScreenKey = debugOpen ? `debug-${section}` : section;
+  const activeScreenKey = debugOpen
+    ? `debug-${section}`
+    : section === "profile" && profileAuthOpen
+      ? "profile-auth"
+      : section;
 
   let activeScreen = null;
 
@@ -257,29 +278,32 @@ export function SmartBiteApp() {
       />
     );
   } else if (section === "history") {
-    activeScreen = <HistoryScreen meals={analysis.history} navDirection={navDirection} />;
-  } else if (section === "profile") {
     activeScreen = (
+      <HistoryScreen
+        meals={analysis.history}
+        navDirection={navDirection}
+        onDeleteMeal={analysis.removeMeal}
+        onMealRemoved={() => showToast("Meal removed")}
+      />
+    );
+  } else if (section === "profile") {
+    activeScreen = profileAuthOpen ? (
+      <AuthScreen onAuth={handleAuthSuccess} />
+    ) : (
       <ProfileScreen
         profile={profile}
         onChange={setProfile}
         metrics={metrics}
         onOpenDebug={() => setDebugOpen(true)}
-        userName={currentUser?.name}
+        currentUser={currentUser}
+        onSignIn={() => setProfileAuthOpen(true)}
         onSignOut={handleSignOut}
-        navDirection={navDirection}
       />
     );
   }
 
   if (phase === "welcome") {
-    return (
-      <WelcomeScreen
-        onConnect={connectScale}
-        onContinue={continueWithoutScale}
-        onAuthChange={handleAuthSuccess}
-      />
-    );
+    return <WelcomeScreen onConnect={connectScale} onContinue={continueWithoutScale} />;
   }
 
   if (phase === "connect") {

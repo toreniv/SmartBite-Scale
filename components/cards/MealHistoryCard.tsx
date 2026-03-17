@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { useLanguage } from "@/hooks/useLanguage";
 import { formatTime } from "@/lib/nutrition";
@@ -28,6 +29,10 @@ export function MealHistoryCard({ meal }: { meal: MealHistoryItem }) {
               {t("common.gramsShort")}
             </span>
           </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="text-[11px] font-medium text-slate-400">View</span>
+          <ChevronRight className="h-4 w-4 text-slate-300" />
         </div>
       </div>
     </Card>

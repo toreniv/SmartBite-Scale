@@ -109,6 +109,17 @@ export function signOut() {
   writeSession(null);
 }
 
+export function logoutUser(): void {
+  writeSession(null);
+
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem("smartbite_user");
+  window.dispatchEvent(new Event("storage"));
+}
+
 export function getCurrentUser(): User | null {
   if (typeof window === "undefined") {
     return null;

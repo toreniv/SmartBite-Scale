@@ -1,23 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import {
-  Bluetooth,
-  BrainCircuit,
-  Camera,
-  ChevronRight,
-  Scale,
-  Sparkles,
-  UserCircle2,
-  X,
-} from "lucide-react";
-import { AuthScreen } from "@/components/screens/AuthScreen";
+import { Bluetooth, BrainCircuit, Camera, ChevronRight, Scale, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { useLanguage } from "@/hooks/useLanguage";
-import { getCurrentUser } from "@/lib/localAuth";
-import type { User } from "@/lib/types";
 
 function FeatureItem({
   icon,
@@ -44,37 +31,21 @@ function FeatureItem({
 export function WelcomeScreen({
   onConnect,
   onContinue,
-  onAuthChange,
 }: {
   onConnect: () => void;
   onContinue: () => void;
-  onAuthChange?: () => void;
 }) {
   const { dir, t } = useLanguage();
   const [busy, setBusy] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [authOpen, setAuthOpen] = useState(false);
   const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    setCurrentUser(getCurrentUser());
-
-    const syncUser = () => {
-      setCurrentUser(getCurrentUser());
-    };
-
-    window.addEventListener("storage", syncUser);
-
     return () => {
-      window.removeEventListener("storage", syncUser);
-
       if (timerRef.current) {
         window.clearTimeout(timerRef.current);
       }
     };
   }, []);
-
-  const bannerInitial = currentUser?.name?.trim().charAt(0).toUpperCase() || "U";
 
   const run = (action: () => void) => {
     if (busy) {
@@ -100,26 +71,7 @@ export function WelcomeScreen({
           <Sparkles className="h-3 w-3 text-blue-600" />
           {t("common.smartNutrition")}
         </div>
-        <div className="flex items-center gap-2">
-          <LanguageSwitcher />
-          <button
-            type="button"
-            onClick={() => setAuthOpen(true)}
-            className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/78 shadow-sm ring-1 ring-white/80 backdrop-blur-md"
-            aria-label={currentUser ? "Open account" : "Open sign in"}
-          >
-            {currentUser ? (
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[linear-gradient(135deg,#6366f1,#4338ca)] text-sm font-semibold text-white shadow-md">
-                {bannerInitial}
-              </div>
-            ) : (
-              <>
-                <UserCircle2 className="h-6 w-6 text-slate-600" />
-                <span className="absolute bottom-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-white" />
-              </>
-            )}
-          </button>
-        </div>
+        <LanguageSwitcher />
       </div>
 
       <div className="relative shrink-0 pt-0.5">
@@ -258,59 +210,6 @@ export function WelcomeScreen({
           {t("common.productName")}
         </p>
       </div>
-
-      <AnimatePresence>
-        {authOpen ? (
-          <>
-            <motion.button
-              type="button"
-              aria-label="Close account sheet"
-              className="absolute inset-0 bg-slate-950/28"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setAuthOpen(false)}
-            />
-            <motion.div
-              className="absolute inset-x-0 bottom-0 z-10 rounded-t-[32px] bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(239,246,255,0.96))] px-4 pb-6 pt-3 shadow-[0_-24px_60px_rgba(15,23,42,0.18)]"
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 220, damping: 28 }}
-            >
-              <div className="mx-auto h-1.5 w-14 rounded-full bg-slate-300" />
-              <div className="mt-3 flex items-center justify-between px-1">
-                <div>
-                  <div className="text-sm font-semibold text-slate-950">Your account</div>
-                  <div className="text-xs text-slate-500">
-                    Sign in to save your profile on this device.
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAuthOpen(false)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500"
-                  aria-label="Close"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="mt-4 max-h-[70vh] overflow-y-auto">
-                <AuthScreen
-                  embedded
-                  onAuth={() => {
-                    setCurrentUser(getCurrentUser());
-                    setAuthOpen(false);
-                    onAuthChange?.();
-                  }}
-                />
-              </div>
-            </motion.div>
-          </>
-        ) : null}
-      </AnimatePresence>
     </div>
   );
 }
