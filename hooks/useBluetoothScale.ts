@@ -61,6 +61,7 @@ export function useBluetoothScale() {
   const sourceActiveRef = useRef(false);
   const demoIntervalRef = useRef<number | null>(null);
   const demoStateRef = useRef<DemoState>(createDemoState());
+  const demoLockedWeightRef = useRef<number | null>(null);
 
   const [supported] = useState(isBluetoothSupported());
   const [initialized, setInitialized] = useState(false);
@@ -179,6 +180,10 @@ export function useBluetoothScale() {
   };
 
   const scheduleNextDemoTick = () => {
+    if (demoLockedWeightRef.current !== null) {
+      return;
+    }
+
     demoIntervalRef.current = window.setTimeout(() => {
       const nextWeight = nextDemoWeight();
       handleParsedMessage(parseDeviceMessage(`WEIGHT:${nextWeight.toFixed(2)}`));
@@ -259,11 +264,31 @@ export function useBluetoothScale() {
 
   const startDemoMode = () => {
     stopDemoMode();
+    demoLockedWeightRef.current = null;
     demoStateRef.current = createDemoState();
     handleParsedMessage(parseDeviceMessage("STATUS:READY"));
     handleParsedMessage(parseDeviceMessage("STATUS:STREAM_ON"));
 
     scheduleNextDemoTick();
+  };
+
+  const lockDemoWeight = (value: number) => {
+    if (!isBypassMode) {
+      return;
+    }
+
+    const normalized = Number(value.toFixed(1));
+    demoLockedWeightRef.current = normalized;
+    stopDemoMode();
+    samplesRef.current = Array.from({ length: STABLE_SAMPLE_COUNT }, () => ({
+      value: normalized,
+      timestamp: Date.now(),
+    }));
+    stableWeightRef.current = normalized;
+    setWeightSamples(samplesRef.current.map((entry) => entry.value));
+    setLatestWeight(normalized);
+    setStableWeight(normalized);
+    setMeasurementStatus("stable");
   };
 
   useEffect(() => {
@@ -372,8 +397,11 @@ export function useBluetoothScale() {
 
   const tare = async () => {
     if (isBypassMode) {
+      demoLockedWeightRef.current = null;
+      stopDemoMode();
       demoStateRef.current = createDemoState();
       handleParsedMessage(parseDeviceMessage("TARE_DONE"));
+      startDemoMode();
       return { success: true, message: "Scale tared and ready." };
     }
 
@@ -448,6 +476,7 @@ export function useBluetoothScale() {
     connect,
     disconnect,
     enableBypassMode,
+    lockDemoWeight,
     lastMessage,
     sendLedCommand,
     tare,

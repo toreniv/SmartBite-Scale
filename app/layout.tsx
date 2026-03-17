@@ -5,6 +5,12 @@ import { LanguageProvider } from "@/hooks/useLanguage";
 export const metadata: Metadata = {
   title: "SmartBite Scale",
   description: "Smart food scale companion app",
+  icons: {
+    icon: "/assets/icons/favicon-32x32.png",
+    shortcut: "/assets/icons/favicon-16x16.png",
+    apple: "/assets/icons/apple-touch-icon.png",
+  },
+  manifest: "/assets/icons/site.webmanifest",
 };
 
 export default function RootLayout({

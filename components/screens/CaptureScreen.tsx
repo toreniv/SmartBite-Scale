@@ -21,6 +21,9 @@ export function CaptureScreen({
   onAnalyzeUpload,
   cameraReady,
   status,
+  isConnected,
+  isDemoMode,
+  measurementStatus,
   stableWeight,
   latestWeight,
   result,
@@ -38,6 +41,9 @@ export function CaptureScreen({
   onAnalyzeUpload: () => void;
   cameraReady: boolean;
   status: "idle" | "loading" | "success" | "error";
+  isConnected: boolean;
+  isDemoMode: boolean;
+  measurementStatus: "disconnected" | "idle" | "measuring" | "stable";
   stableWeight: number;
   latestWeight: number;
   result: MealAnalysisResult | null;
@@ -45,6 +51,8 @@ export function CaptureScreen({
   navDirection: NavDirection;
 }) {
   const { t } = useLanguage();
+  const estimatedWeight = stableWeight || latestWeight;
+  const showStableServing = isConnected && measurementStatus === "stable" && stableWeight > 0;
 
   return (
     <div className="space-y-4">
@@ -91,20 +99,46 @@ export function CaptureScreen({
           </Button>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-3xl bg-slate-50 px-4 py-4">
-            <div className="text-sm text-slate-500">{t("dashboard.liveWeight")}</div>
-            <div className="mt-2 text-2xl font-semibold text-slate-950">
-              {latestWeight.toFixed(1)}
-              {t("common.gramsShort")}
+          {isDemoMode ? (
+            <div className="col-span-2 rounded-3xl bg-slate-50 px-4 py-4">
+              <div className="text-sm text-slate-500">Demo estimate</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-950">
+                ~{estimatedWeight.toFixed(0)}
+                {t("common.gramsShort")}
+              </div>
+              <div className="mt-1 text-xs text-slate-400">estimated weight</div>
             </div>
-          </div>
-          <div className="rounded-3xl bg-slate-50 px-4 py-4">
-            <div className="text-sm text-slate-500">{t("dashboard.stableWeight")}</div>
-            <div className="mt-2 text-2xl font-semibold text-slate-950">
-              {stableWeight.toFixed(1)}
-              {t("common.gramsShort")}
-            </div>
-          </div>
+          ) : (
+            <>
+              <div className="rounded-3xl bg-slate-50 px-4 py-4">
+                <div className="text-sm text-slate-500">{t("dashboard.liveWeight")}</div>
+                <div className="mt-2 text-2xl font-semibold text-slate-950">
+                  {latestWeight.toFixed(1)}
+                  {t("common.gramsShort")}
+                </div>
+                {isConnected ? (
+                  <div className="mt-2 flex items-center gap-1 text-[9px] text-emerald-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Live from scale hardware
+                  </div>
+                ) : null}
+              </div>
+              <div className="rounded-3xl bg-slate-50 px-4 py-4">
+                <div className="flex items-center justify-between gap-2 text-sm text-slate-500">
+                  <span>{t("dashboard.stableWeight")}</span>
+                  {showStableServing ? (
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-700">
+                      Stable serving
+                    </span>
+                  ) : null}
+                </div>
+                <div className="mt-2 text-2xl font-semibold text-slate-950">
+                  {stableWeight.toFixed(1)}
+                  {t("common.gramsShort")}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </Card>
 
@@ -183,6 +217,7 @@ export function CaptureScreen({
           result={result}
           measuredWeight={stableWeight || latestWeight}
           disclaimer={disclaimer}
+          isDemoMode={isDemoMode}
         />
       ) : null}
     </div>

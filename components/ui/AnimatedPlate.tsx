@@ -26,7 +26,7 @@ const MODE_CONFIG: Record<PlateMode, ModeConfig> = {
     y: 0,
     glowOpacity: 0.22,
     glowColor: "#9BD7FF",
-    size: 320,
+    size: 380,
   },
   homeAmbient: {
     scale: 0.92,
@@ -34,7 +34,7 @@ const MODE_CONFIG: Record<PlateMode, ModeConfig> = {
     y: 2,
     glowOpacity: 0.42,
     glowColor: "#A8D8FF",
-    size: 296,
+    size: 360,
   },
   captureFocused: {
     scale: 0.96,
@@ -42,7 +42,7 @@ const MODE_CONFIG: Record<PlateMode, ModeConfig> = {
     y: 18,
     glowOpacity: 0.18,
     glowColor: "#A8FFD8",
-    size: 304,
+    size: 348,
   },
   analysisScanning: {
     scale: 0.98,
@@ -50,7 +50,7 @@ const MODE_CONFIG: Record<PlateMode, ModeConfig> = {
     y: 8,
     glowOpacity: 0.78,
     glowColor: "#D8A8FF",
-    size: 300,
+    size: 344,
   },
   resultsCompact: {
     scale: 0.74,
@@ -58,7 +58,7 @@ const MODE_CONFIG: Record<PlateMode, ModeConfig> = {
     y: 0,
     glowOpacity: 0.24,
     glowColor: "#A8FFD8",
-    size: 264,
+    size: 320,
   },
 };
 
@@ -245,7 +245,7 @@ export function AnimatedPlate({
         animate={motionVariant ? "animate" : undefined}
       >
         <img
-          src="/assets/scale/scale_1.png"
+          src="/assets/scale/sbs3.png"
           alt="SmartBite Scale"
           width={config.size}
           height={config.size}

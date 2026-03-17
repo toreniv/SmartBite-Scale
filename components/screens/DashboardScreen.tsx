@@ -27,6 +27,7 @@ export function DashboardScreen({
   disclaimer,
   recommendations,
   isConnected,
+  isDemoMode,
   latestWeight,
   stableWeight,
   measurementStatus,
@@ -43,6 +44,7 @@ export function DashboardScreen({
   disclaimer: string;
   recommendations: RecommendationItem[];
   isConnected: boolean;
+  isDemoMode: boolean;
   latestWeight: number;
   stableWeight: number;
   measurementStatus: "disconnected" | "idle" | "measuring" | "stable";
@@ -107,6 +109,7 @@ export function DashboardScreen({
 
       <ScaleStatusCard
         isConnected={isConnected}
+        isDemoMode={isDemoMode}
         latestWeight={latestWeight}
         stableWeight={stableWeight}
         measurementStatus={measurementStatus}
@@ -115,7 +118,12 @@ export function DashboardScreen({
       />
 
       {latestResult ? (
-        <AnalysisResultCard result={latestResult} measuredWeight={measuredWeight} disclaimer={disclaimer} />
+        <AnalysisResultCard
+          result={latestResult}
+          measuredWeight={measuredWeight}
+          disclaimer={disclaimer}
+          isDemoMode={isDemoMode}
+        />
       ) : (
         <Card>
           <div className="text-sm font-medium text-slate-500">{t("dashboard.mealAnalysis")}</div>

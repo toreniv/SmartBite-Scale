@@ -157,8 +157,14 @@ export function SmartBiteApp() {
   };
 
   const analyzeBlob = async (blob: Blob) => {
+    const analysisWeight = measuredWeight;
+
     try {
-      await analysis.analyzeImage(blob, mealNote, measuredWeight);
+      if (bluetooth.isBypassMode && analysisWeight) {
+        bluetooth.lockDemoWeight(analysisWeight);
+      }
+
+      await analysis.analyzeImage(blob, mealNote, analysisWeight);
       showToast(t("toasts.mealEstimateReady"));
       setSection("home");
     } catch (error) {
@@ -186,6 +192,8 @@ export function SmartBiteApp() {
 
   const latestMeal = analysis.history[0] ?? null;
   const latestResult = analysis.result ?? latestMeal;
+  const latestMealWeight =
+    latestMeal?.measuredWeightGrams ?? latestMeal?.estimatedWeightGrams ?? measuredWeight;
   const lastServingEvent = bluetooth.lastServingEvent
     ? t("bluetooth.servingEventAt", {
         time: new Date(bluetooth.lastServingEvent.detectedAt).toLocaleTimeString(),
@@ -234,10 +242,11 @@ export function SmartBiteApp() {
         metrics={metrics}
         progress={analysis.dailyProgress}
         latestResult={latestResult}
-        measuredWeight={measuredWeight ?? 0}
+        measuredWeight={latestMealWeight ?? 0}
         disclaimer={analysis.disclaimer}
         recommendations={analysis.recommendations}
         isConnected={bluetooth.isConnected}
+        isDemoMode={bluetooth.isBypassMode}
         latestWeight={bluetooth.latestWeight}
         stableWeight={bluetooth.stableWeight}
         measurementStatus={bluetooth.measurementStatus}
@@ -270,6 +279,9 @@ export function SmartBiteApp() {
         onAnalyzeUpload={handleAnalyzeUpload}
         cameraReady={Boolean(camera.stream)}
         status={analysis.status}
+        isConnected={bluetooth.isConnected}
+        isDemoMode={bluetooth.isBypassMode}
+        measurementStatus={bluetooth.measurementStatus}
         stableWeight={bluetooth.stableWeight}
         latestWeight={bluetooth.latestWeight}
         result={latestResult}

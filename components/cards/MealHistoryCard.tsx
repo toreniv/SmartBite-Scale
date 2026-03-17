@@ -8,6 +8,7 @@ import type { MealHistoryItem } from "@/lib/types";
 
 export function MealHistoryCard({ meal }: { meal: MealHistoryItem }) {
   const { t } = useLanguage();
+  const displayWeight = meal.measuredWeightGrams ?? meal.estimatedWeightGrams;
 
   return (
     <Card className="p-4">
@@ -25,7 +26,7 @@ export function MealHistoryCard({ meal }: { meal: MealHistoryItem }) {
               {meal.calories} {t("common.kcal")}
             </span>
             <span>
-              {meal.estimatedWeightGrams}
+              {displayWeight}
               {t("common.gramsShort")}
             </span>
           </div>

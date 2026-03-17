@@ -66,7 +66,7 @@ export function WelcomeScreen({
       <div className="pointer-events-none absolute right-[-15%] top-[5%] h-52 w-52 rounded-full bg-indigo-200/30 blur-3xl" />
       <div className="pointer-events-none absolute left-[-10%] top-[30%] h-40 w-40 rounded-full bg-cyan-200/20 blur-3xl" />
 
-      <div className="relative flex shrink-0 items-center justify-between pt-3 pb-1.5">
+      <div className="relative flex shrink-0 items-center justify-between pt-2.5 pb-1">
         <div className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 shadow-sm backdrop-blur-md">
           <Sparkles className="h-3 w-3 text-blue-600" />
           {t("common.smartNutrition")}
@@ -74,18 +74,18 @@ export function WelcomeScreen({
         <LanguageSwitcher />
       </div>
 
-      <div className="relative shrink-0 pt-0.5">
+      <div className="relative shrink-0 pt-0">
         <h1 className="text-[2.4rem] font-semibold leading-[1.0] tracking-[-0.05em] text-slate-950">
           SmartBite
           <br />
           <span className="text-slate-950/70">Scale.</span>
         </h1>
-        <p className="mt-1 text-[0.9rem] text-slate-600">{t("welcome.subtitle")}</p>
+        <p className="mt-0.5 text-[0.88rem] text-slate-600">{t("welcome.subtitle")}</p>
       </div>
 
-      <div className="relative mt-2.5 min-h-0 flex-1">
+      <div className="relative mt-2 min-h-0 flex-1">
         <div className="h-full overflow-hidden rounded-[28px] bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(240,247,255,0.82))] shadow-[0_20px_50px_rgba(30,64,175,0.12)] ring-1 ring-white/80 backdrop-blur-xl">
-          <div className="flex items-start justify-between gap-2 px-4 pt-3">
+          <div className="flex items-start justify-between gap-2 px-4 pt-2.5">
             <div>
               <div className="text-[9px] font-semibold uppercase tracking-[0.22em] text-slate-400">
                 {t("common.weightPhotoAi")}
@@ -99,74 +99,67 @@ export function WelcomeScreen({
             </div>
           </div>
 
-          <div className="mx-4 mt-2.5 rounded-[20px] bg-[linear-gradient(180deg,#111827,#1e293b)] px-3 py-2.5">
-            <div className="flex items-center justify-between">
+          <div className="mx-3 mt-1.5 rounded-[22px] bg-[linear-gradient(180deg,#111827,#172033)] px-3 pb-2.5 pt-2.5 shadow-[0_22px_44px_rgba(15,23,42,0.18)]">
+            <div className="flex items-start justify-between gap-3 px-1">
               <div>
                 <div className="text-[9px] uppercase tracking-[0.2em] text-slate-400">
                   {t("welcome.scaleReading")}
                 </div>
-                <div className="mt-0.5 text-[1.3rem] font-semibold tracking-tight text-white">
+                <div className="mt-1 text-[1.55rem] font-semibold tracking-tight text-white">
                   186 {t("common.gramsShort")}
                 </div>
               </div>
-              <div className="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-300">
+              <div className="rounded-full bg-white/8 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-300">
                 {t("welcome.stableServing")}
               </div>
             </div>
 
-            <div className="flex items-center justify-center py-1.5">
+            <div className="mt-2 overflow-hidden rounded-[18px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.16),transparent_58%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))] ring-1 ring-white/10">
               <img
                 src="/assets/scale/sbs3.png"
                 alt="Salmon & Avocado Bowl on SmartBite Scale"
-                className="w-full h-[160px] rounded-[14px] object-cover select-none"
+                className="h-[206px] w-full object-contain object-center select-none"
                 style={{
-                  filter: "brightness(0.92) saturate(1.05)",
+                  filter: "brightness(0.96) saturate(1.03)",
+                  transform: "scale(1.04)",
                 }}
                 draggable={false}
               />
             </div>
 
-            <div className="grid grid-cols-[36px_1fr] gap-2 rounded-[16px] bg-white/8 p-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-[linear-gradient(160deg,#fde68a,#fb923c)]">
-                <Scale className="h-4 w-4 text-slate-900" />
-              </div>
-              <div>
+            <div className="mt-2.5 flex items-start justify-between gap-2.5 px-1">
+              <div className="min-w-0">
                 <div className="flex items-center gap-1 text-[9px] uppercase tracking-wide text-slate-400">
                   <Camera className="h-2.5 w-2.5" />
                   {t("welcome.mealImageMatched")}
                 </div>
-                <div className="mt-0.5 text-[12px] font-semibold text-white">
+                <div className="mt-1 max-h-8 max-w-[19ch] overflow-hidden text-[12px] font-semibold leading-4 text-white text-balance">
                   Salmon &amp; Avocado Bowl
                 </div>
-                <div className="text-[10px] text-slate-400">AI-powered nutritional analysis</div>
+                <div className="mt-1 text-[10px] text-slate-400">
+                  AI-powered nutritional analysis
+                </div>
+              </div>
+              <div className="flex shrink-0 gap-1.5">
+                <div className="rounded-full bg-white/8 px-3 py-1 text-right">
+                  <div className="flex items-center justify-end gap-1 text-[9px] uppercase tracking-wide text-slate-400">
+                    <BrainCircuit className="h-2.5 w-2.5 text-indigo-400" />
+                    {t("welcome.aiEstimate")}
+                  </div>
+                  <div className="mt-1 text-[13px] font-semibold text-white">580 kcal</div>
+                </div>
+                <div className="rounded-full bg-white/8 px-3 py-1 text-right">
+                  <div className="flex items-center justify-end gap-1 text-[9px] uppercase tracking-wide text-slate-400">
+                    <Scale className="h-2.5 w-2.5 text-blue-400" />
+                    {t("welcome.macroFocus")}
+                  </div>
+                  <div className="mt-1 text-[13px] font-semibold text-white">42g protein</div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="mx-4 mt-2 grid grid-cols-2 gap-2">
-            <div className="rounded-[16px] bg-white/80 px-3 py-2.5 shadow-sm">
-              <div className="flex items-center gap-1 text-[9px] uppercase tracking-wide text-slate-400">
-                <BrainCircuit className="h-2.5 w-2.5 text-indigo-500" />
-                {t("welcome.aiEstimate")}
-              </div>
-              <div className="mt-1 text-[1.3rem] font-semibold tracking-tight text-slate-950">
-                580
-              </div>
-              <div className="text-[10px] text-slate-500">{t("common.calories")}</div>
-            </div>
-            <div className="rounded-[16px] bg-white/80 px-3 py-2.5 shadow-sm">
-              <div className="flex items-center gap-1 text-[9px] uppercase tracking-wide text-slate-400">
-                <Scale className="h-2.5 w-2.5 text-blue-500" />
-                {t("welcome.macroFocus")}
-              </div>
-              <div className="mt-1 text-[1.3rem] font-semibold tracking-tight text-slate-950">
-                42g
-              </div>
-              <div className="text-[10px] text-slate-500">{t("common.protein")}</div>
-            </div>
-          </div>
-
-          <div className="mx-4 mt-2.5 mb-3 grid gap-2">
+          <div className="mx-4 mt-1.5 mb-2.5 grid gap-1.5">
             <FeatureItem
               icon={<Scale className="h-4 w-4 text-blue-600" />}
               title={t("welcome.featureLiveTitle")}
@@ -186,12 +179,12 @@ export function WelcomeScreen({
         </div>
       </div>
 
-      <div className="relative shrink-0 pb-5 pt-2.5">
+      <div className="relative shrink-0 pb-4 pt-2">
         <Button
           fullWidth
           onClick={() => run(onConnect)}
           disabled={busy}
-          className="h-13 rounded-[24px] bg-[linear-gradient(135deg,#1d4ed8,#4338ca,#6366f1)] text-[15px] font-semibold text-white shadow-[0_18px_40px_rgba(59,130,246,0.28)]"
+          className="h-12 rounded-[23px] bg-[linear-gradient(135deg,#1d4ed8,#4338ca,#6366f1)] text-[15px] font-semibold text-white shadow-[0_18px_40px_rgba(59,130,246,0.28)]"
         >
           <Bluetooth className="mr-2 h-5 w-5" />
           {t("common.connectScale")}
@@ -201,12 +194,12 @@ export function WelcomeScreen({
           fullWidth
           onClick={() => run(onContinue)}
           disabled={busy}
-          className="mt-2 h-11 rounded-[20px] bg-white/60 text-slate-700 backdrop-blur-md"
+          className="mt-1.5 h-10 rounded-[18px] bg-white/60 text-slate-700 backdrop-blur-md"
         >
           {t("common.tryDemoMode")}
           <ChevronRight className="ml-1.5 h-4 w-4" />
         </Button>
-        <p className="mt-2 text-center text-[10px] tracking-wide text-slate-400">
+        <p className="mt-1.5 text-center text-[10px] tracking-wide text-slate-400">
           {t("common.productName")}
         </p>
       </div>

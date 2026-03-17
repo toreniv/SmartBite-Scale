@@ -10,15 +10,18 @@ export function AnalysisResultCard({
   result,
   measuredWeight,
   disclaimer,
+  isDemoMode = false,
 }: {
   result: MealAnalysisResult;
   measuredWeight?: number;
   disclaimer: string;
+  isDemoMode?: boolean;
 }) {
   const { t } = useLanguage();
   const providerLabel = result.provider.toUpperCase();
   const attempts = result.attempts ?? [];
   const usedFallback = Boolean(result.usedFallback);
+  const displayWeight = Math.round(measuredWeight ?? result.estimatedWeightGrams);
 
   return (
     <Card>
@@ -45,17 +48,29 @@ export function AnalysisResultCard({
 
       <div className="mt-5 grid grid-cols-2 gap-3">
         <div className="rounded-3xl bg-slate-50 px-4 py-4">
-          <div className="text-sm text-slate-500">{t("dashboard.estimatedCalories")}</div>
+          <div className="text-sm text-slate-500">
+            {isDemoMode ? "AI estimate based on visual analysis" : t("dashboard.estimatedCalories")}
+          </div>
           <div className="mt-2 text-2xl font-semibold text-slate-950">{result.calories}</div>
         </div>
         <div className="rounded-3xl bg-slate-50 px-4 py-4">
-          <div className="text-sm text-slate-500">{t("dashboard.weightUsed")}</div>
+          <div className="text-sm text-slate-500">
+            {isDemoMode ? "Demo weight" : t("dashboard.weightUsed")}
+          </div>
           <div className="mt-2 text-2xl font-semibold text-slate-950">
-            {Math.round(measuredWeight ?? result.estimatedWeightGrams)}
+            {isDemoMode ? "~" : ""}
+            {displayWeight}
             {t("common.gramsShort")}
           </div>
+          {isDemoMode ? <div className="mt-1 text-xs text-slate-400">demo estimate</div> : null}
         </div>
       </div>
+
+      {isDemoMode ? (
+        <div className="mt-4 rounded-3xl bg-blue-50 px-4 py-3 text-sm text-slate-600">
+          AI estimate based on visual analysis
+        </div>
+      ) : null}
 
       <div className="mt-5 space-y-3">
         <div>
