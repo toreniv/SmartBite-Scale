@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { analyzeMealWithGemini, hasGeminiApiKey } from "@/lib/ai/gemini";
 import { analyzeMealWithMock } from "@/lib/ai/mock";
-import { toProviderAttempt } from "@/lib/ai/normalize";
+import { AIProviderError, toProviderAttempt } from "@/lib/ai/normalize";
 import { APP_DISCLAIMER } from "@/lib/constants";
 import type {
   AnalyzeMealErrorResponse,
@@ -11,8 +11,47 @@ import type {
 
 export const runtime = "nodejs";
 
+const ALLOWED_METHODS = "POST, OPTIONS";
+const ALLOWED_HEADERS = "Content-Type";
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isMockFallbackEnabled() {
+  return process.env.ALLOW_MOCK_ANALYSIS_FALLBACK === "true" || process.env.NODE_ENV !== "production";
+}
+
+function getCorsAllowedOrigin(request: Request) {
+  const requestOrigin = request.headers.get("origin")?.trim();
+  const configuredOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  if (!requestOrigin || !configuredOrigins?.length) {
+    return "";
+  }
+
+  if (configuredOrigins.includes("*")) {
+    return "*";
+  }
+
+  return configuredOrigins.includes(requestOrigin) ? requestOrigin : "";
+}
+
+function withCorsHeaders(response: NextResponse, request: Request) {
+  const allowedOrigin = getCorsAllowedOrigin(request);
+
+  if (!allowedOrigin) {
+    return response;
+  }
+
+  response.headers.set("Access-Control-Allow-Origin", allowedOrigin);
+  response.headers.set("Access-Control-Allow-Methods", ALLOWED_METHODS);
+  response.headers.set("Access-Control-Allow-Headers", ALLOWED_HEADERS);
+  response.headers.set("Vary", "Origin");
+
+  return response;
 }
 
 function isAnalyzeMealRequest(value: unknown): value is AnalyzeMealRequest {
@@ -39,6 +78,7 @@ function isAnalyzeMealRequest(value: unknown): value is AnalyzeMealRequest {
 }
 
 function jsonError(
+  request: Request,
   status: number,
   code: AnalyzeMealErrorResponse["error"]["code"],
   message: string,
@@ -54,7 +94,15 @@ function jsonError(
     attempts,
   };
 
-  return NextResponse.json(payload, { status });
+  return withCorsHeaders(NextResponse.json(payload, { status }), request);
+}
+
+function jsonResponse(request: Request, payload: AnalyzeMealResponse) {
+  return withCorsHeaders(NextResponse.json(payload), request);
+}
+
+export async function OPTIONS(request: Request) {
+  return withCorsHeaders(new NextResponse(null, { status: 204 }), request);
 }
 
 export async function POST(request: Request) {
@@ -63,11 +111,12 @@ export async function POST(request: Request) {
   try {
     payload = await request.json();
   } catch {
-    return jsonError(400, "INVALID_REQUEST", "Request body must be valid JSON.", false);
+    return jsonError(request, 400, "INVALID_REQUEST", "Request body must be valid JSON.", false);
   }
 
   if (!isAnalyzeMealRequest(payload)) {
     return jsonError(
+      request,
       400,
       "INVALID_REQUEST",
       "Request body must include a valid imageBase64 data URL.",
@@ -75,20 +124,38 @@ export async function POST(request: Request) {
     );
   }
 
-  if (hasGeminiApiKey()) {
-    try {
-      const geminiResult = await analyzeMealWithGemini(payload);
-      const response: AnalyzeMealResponse = {
-        ...geminiResult,
-        disclaimer: APP_DISCLAIMER,
-        usedFallback: false,
-        attempts: [toProviderAttempt("gemini", "success")],
-      };
+  if (!hasGeminiApiKey()) {
+    if (!isMockFallbackEnabled()) {
+      return jsonError(
+        request,
+        503,
+        "PROVIDER_UNAVAILABLE",
+        "Gemini API key is not configured on the backend.",
+        false,
+      );
+    }
 
-      return NextResponse.json(response);
-    } catch {
+    const mockResult = await analyzeMealWithMock(payload);
+    return jsonResponse(request, {
+      ...mockResult,
+      disclaimer: APP_DISCLAIMER,
+      usedFallback: true,
+      attempts: [toProviderAttempt("mock", "success")],
+    });
+  }
+
+  try {
+    const geminiResult = await analyzeMealWithGemini(payload);
+    return jsonResponse(request, {
+      ...geminiResult,
+      disclaimer: APP_DISCLAIMER,
+      usedFallback: false,
+      attempts: [toProviderAttempt("gemini", "success")],
+    });
+  } catch (error) {
+    if (isMockFallbackEnabled()) {
       const mockResult = await analyzeMealWithMock(payload);
-      const response: AnalyzeMealResponse = {
+      return jsonResponse(request, {
         ...mockResult,
         disclaimer: APP_DISCLAIMER,
         usedFallback: true,
@@ -96,19 +163,27 @@ export async function POST(request: Request) {
           toProviderAttempt("gemini", "failed"),
           toProviderAttempt("mock", "success"),
         ],
-      };
-
-      return NextResponse.json(response);
+      });
     }
+
+    if (error instanceof AIProviderError) {
+      return jsonError(
+        request,
+        error.status ?? 502,
+        "ANALYSIS_FAILED",
+        error.message,
+        error.retryable,
+        [toProviderAttempt("gemini", "failed")],
+      );
+    }
+
+    return jsonError(
+      request,
+      500,
+      "ANALYSIS_FAILED",
+      "Meal analysis failed on the backend.",
+      true,
+      [toProviderAttempt("gemini", "failed")],
+    );
   }
-
-  const mockResult = await analyzeMealWithMock(payload);
-  const response: AnalyzeMealResponse = {
-    ...mockResult,
-    disclaimer: APP_DISCLAIMER,
-    usedFallback: true,
-    attempts: [toProviderAttempt("mock", "success")],
-  };
-
-  return NextResponse.json(response);
 }

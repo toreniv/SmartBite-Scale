@@ -8,7 +8,24 @@ function normalizeApiPath(path: string) {
 
 function getApiBaseUrl() {
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-  return baseUrl ? baseUrl.replace(/\/+$/, "") : "";
+
+  if (!baseUrl) {
+    return "";
+  }
+
+  let parsedUrl: URL;
+
+  try {
+    parsedUrl = new URL(baseUrl);
+  } catch {
+    throw new Error("NEXT_PUBLIC_API_BASE_URL must be a valid absolute URL.");
+  }
+
+  if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+    throw new Error("NEXT_PUBLIC_API_BASE_URL must use http or https.");
+  }
+
+  return parsedUrl.toString().replace(/\/+$/, "");
 }
 
 export function buildApiUrl(path: string) {
@@ -19,5 +36,5 @@ export function buildApiUrl(path: string) {
     return normalizedPath;
   }
 
-  return `${baseUrl}${normalizedPath}`;
+  return new URL(normalizedPath, `${baseUrl}/`).toString();
 }
