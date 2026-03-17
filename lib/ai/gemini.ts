@@ -1,3 +1,5 @@
+import "server-only";
+
 import type { AnalyzeMealRequest } from "@/lib/types";
 import {
   AIProviderError,
@@ -28,7 +30,7 @@ interface GeminiResponsePayload {
 }
 
 export function hasGeminiApiKey() {
-  return Boolean(process.env.NEXT_PUBLIC_GEMINI_API_KEY);
+  return Boolean(process.env.GEMINI_API_KEY);
 }
 
 function getGeminiModel() {
@@ -59,7 +61,7 @@ function extractGeminiText(payload: GeminiResponsePayload) {
 }
 
 export async function analyzeMealWithGemini(request: AnalyzeMealRequest) {
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
     throw new AIProviderError("gemini", "Gemini API key is not configured.", {
