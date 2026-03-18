@@ -1,123 +1,130 @@
-# SmartBite Scale 🍽️⚖️
+# SmartBite Scale
 
-> AI-powered nutrition tracking through your smart food scale.
+SmartBite Scale is an active prototype for meal tracking with two inputs:
 
-SmartBite Scale is a mobile-first web app that combines a Bluetooth smart
-scale with AI meal analysis to give you instant, accurate nutritional data
-from a single photo of your food.
+- a connected food scale for live weight data
+- a photo-based meal analysis flow powered by a server-side Gemini integration
 
----
+The project is built as a mobile-first Next.js app and includes a Capacitor Android shell plus firmware for the Arduino-based scale prototype.
 
-## ✨ Features
+## Status
 
-- **Live weight tracking** — Real-time readings from a Bluetooth HX711-based scale
-- **AI meal analysis** — Snap a photo, get calories, protein, carbs, and fat instantly
-- **Gemini-powered** — Uses Google Gemini 1.5 Flash for fast and accurate food recognition
-- **Meal history** — Full log of every scanned meal with detailed nutritional breakdown
-- **Daily goals** — Personalized calorie and macro targets based on your health profile
-- **Demo mode** — Try the full app without a physical scale
-- **Multilingual** — English and Hebrew support
-- **PWA-ready** — Works as an installable app on iOS and Android
+This repository is a working prototype, not a finished product.
 
----
+What works today:
 
-## 📱 Screenshots
+- meal photo analysis through a backend `/api/analyze` route
+- server-only Gemini key handling
+- profile-based calorie and macro targets
+- local meal history stored in the browser
+- demo mode for testing without hardware
+- Bluetooth scale connection flow and debug tooling
+- static export support for Capacitor builds
 
-> Coming soon
+What is still in progress:
 
----
+- production deployment and mobile distribution
+- polished screenshots and product walkthrough assets
+- hardening around hardware setup, testing, and edge cases
+- backend hosting configuration for shared production use
 
-## 🚀 Getting Started
+## Demo Scope
 
-### Prerequisites
+The app currently focuses on the core prototype loop:
 
-- Node.js 18+
-- npm or yarn
-- A Google Gemini API key (free) → [aistudio.google.com](https://aistudio.google.com)
+1. connect a scale or enter demo mode
+2. capture or upload a meal photo
+3. send the meal to the backend analysis route
+4. return estimated calories, protein, carbs, fat, and confidence
+5. view the result alongside daily targets and meal history
 
-### Installation
+## Stack
+
+- Next.js App Router
+- React 19
+- Tailwind CSS 4
+- Framer Motion
+- Capacitor Android
+- Google Gemini via a server-side route
+- Arduino Mega + HX711 firmware prototype
+
+## Repository Layout
+
+```text
+app/                         Next.js routes and API handlers
+components/                  UI components and mobile-first screens
+hooks/                       Camera, Bluetooth, profile, and meal-analysis hooks
+lib/                         Shared logic, AI helpers, nutrition, storage, i18n
+public/                      Static app assets
+android/                     Capacitor Android project
+firmware/arduino-mega-hc06/  Arduino firmware prototype
+```
+
+## Local Setup
 
 ```bash
-git clone https://github.com/toreniv/SmartBite-Scale.git
-cd SmartBite-Scale
 npm install
-```
-
-### Environment Setup
-
-Create a `.env.local` file in the root:
-
-```env
-# Get your free key at https://aistudio.google.com
-NEXT_PUBLIC_GEMINI_API_KEY=your_key_here
-```
-
-### Run Locally
-
-```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Create a `.env.local` file for local work. Use `.env.example` as the source of truth for required variables.
 
----
+For local development, the current default flow is:
 
-## 🏗️ Tech Stack
+- run the Next.js app locally
+- keep `NEXT_PUBLIC_API_BASE_URL` empty for same-origin requests
+- keep Gemini credentials server-side only
 
-| Layer      | Technology                         |
-| ---------- | --------------------------         |
-| Framework  | Next.js 14 (static export)         |
-| UI         | React + Tailwind CSS               |
-| Animations | Framer Motion                      |
-| AI         | Google Gemini 1.5 Flash            |
-| Bluetooth  | Web Bluetooth API                  |
-| Hardware   | Arduino Mega + HX711 load cell     |
-| Storage    | localStorage                       |
-| Mobile     | Capacitor (iOS / Android)          |
+## Environment Notes
 
+Important:
 
----
+- `GEMINI_API_KEY` must stay server-only
+- `NEXT_PUBLIC_API_BASE_URL` is only for the frontend base URL
+- `NEXT_OUTPUT_MODE=server` is used for hosted web/backend deployments
+- `NEXT_OUTPUT_MODE=export` is used for static Capacitor builds
 
-## 🔧 Hardware
+See `.env.example` for the current supported configuration.
 
-The physical scale is built with:
-- **Arduino Mega** microcontroller with Bluetooth LE
-- **HX711** 24-bit ADC for precise weight measurement
-- Custom 3D-printed tray housing
+## Screenshots
 
-> Hardware schematics and firmware coming soon.
+Recommended screenshot location:
 
----
-
-## 📂 Project Structure
-
-```
-SmartBite-Scale/
-├── app/                  # Next.js app router
-├── components/
-│   ├── cards/            # UI cards (scale status, meal analysis, history)
-│   ├── screens/          # Full screens (Home, Capture, History, Profile)
-│   └── ui/               # Reusable UI components
-├── hooks/                # Custom React hooks (Bluetooth, meal analysis)
-├── lib/
-│   ├── ai/               # Gemini integration + mock fallback
-│   └── types.ts          # Shared TypeScript types
-└── public/               # Static assets and icons
+```text
+docs/screenshots/
 ```
 
----
+Recommended filenames:
 
-## 📄 License
+- `welcome-screen.png`
+- `dashboard-screen.png`
+- `capture-screen.png`
+- `history-screen.png`
+- `profile-screen.png`
 
-MIT © Niv Toren
+Ready-to-paste markdown snippet:
 
----
+```md
+## Screenshots
 
-## 🙏 Acknowledgements
+<p align="center">
+  <img src="docs/screenshots/welcome-screen.png" alt="Welcome screen" width="220" />
+  <img src="docs/screenshots/dashboard-screen.png" alt="Dashboard screen" width="220" />
+  <img src="docs/screenshots/capture-screen.png" alt="Capture screen" width="220" />
+</p>
 
-- [Google Gemini](https://deepmind.google/technologies/gemini/) for AI meal analysis
-- [Lucide Icons](https://lucide.dev) for the icon set
-- [Framer Motion](https://www.framer.com/motion/) for animations
+<p align="center">
+  <img src="docs/screenshots/history-screen.png" alt="History screen" width="220" />
+  <img src="docs/screenshots/profile-screen.png" alt="Profile screen" width="220" />
+</p>
 ```
 
-***
+## Notes for Reviewers
+
+- authentication is currently local-only and stored in browser storage
+- the hardware integration is a prototype path, with a demo mode available when hardware is not connected
+- nutrition estimates are guidance, not medical advice
+
+## License
+
+MIT

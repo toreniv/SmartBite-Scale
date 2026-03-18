@@ -24,7 +24,14 @@ export function ConnectScreen({
   const { dir, t } = useLanguage();
 
   return (
-    <div dir={dir} className="mx-auto min-h-screen max-w-[430px] px-5 pt-8">
+    <div
+      dir={dir}
+      className="mx-auto flex h-[100svh] max-h-[100svh] max-w-[430px] flex-col justify-center px-5"
+      style={{
+        paddingTop: "calc(1rem + env(safe-area-inset-top))",
+        paddingBottom: "calc(1rem + env(safe-area-inset-bottom))",
+      }}
+    >
       <Card>
         <div className="text-sm font-medium text-slate-500">{t("connect.eyebrow")}</div>
         <h2 className="mt-1 text-3xl font-semibold text-slate-950">{t("connect.title")}</h2>

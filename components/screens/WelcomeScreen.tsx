@@ -61,12 +61,16 @@ export function WelcomeScreen({
   return (
     <div
       dir={dir}
-      className="relative mx-auto flex h-[100dvh] max-w-[430px] flex-col overflow-hidden bg-[linear-gradient(180deg,#f0f5ff_0%,#e8f0fe_100%)] px-5"
+      className="relative mx-auto flex h-[100svh] max-h-[100svh] max-w-[430px] flex-col overflow-hidden bg-[linear-gradient(180deg,#f0f5ff_0%,#e8f0fe_100%)] px-5"
+      style={{
+        paddingTop: "calc(0.5rem + env(safe-area-inset-top))",
+        paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))",
+      }}
     >
       <div className="pointer-events-none absolute right-[-15%] top-[5%] h-52 w-52 rounded-full bg-indigo-200/30 blur-3xl" />
       <div className="pointer-events-none absolute left-[-10%] top-[30%] h-40 w-40 rounded-full bg-cyan-200/20 blur-3xl" />
 
-      <div className="relative flex shrink-0 items-center justify-between pt-2.5 pb-1">
+      <div className="relative flex shrink-0 items-center justify-between pb-1">
         <div className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 shadow-sm backdrop-blur-md">
           <Sparkles className="h-3 w-3 text-blue-600" />
           {t("common.smartNutrition")}
@@ -83,7 +87,7 @@ export function WelcomeScreen({
         <p className="mt-0.5 text-[0.88rem] text-slate-600">{t("welcome.subtitle")}</p>
       </div>
 
-      <div className="relative mt-2 min-h-0 flex-1">
+      <div className="relative mt-1.5 min-h-0 flex-1">
         <div className="h-full overflow-hidden rounded-[28px] bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(240,247,255,0.82))] shadow-[0_20px_50px_rgba(30,64,175,0.12)] ring-1 ring-white/80 backdrop-blur-xl">
           <div className="flex items-start justify-between gap-2 px-4 pt-2.5">
             <div>
@@ -99,7 +103,7 @@ export function WelcomeScreen({
             </div>
           </div>
 
-          <div className="mx-3 mt-1.5 rounded-[22px] bg-[linear-gradient(180deg,#111827,#172033)] px-3 pb-2.5 pt-2.5 shadow-[0_22px_44px_rgba(15,23,42,0.18)]">
+          <div className="mx-3 mt-1 rounded-[22px] bg-[linear-gradient(180deg,#111827,#172033)] px-3 pb-2 pt-2 shadow-[0_22px_44px_rgba(15,23,42,0.18)]">
             <div className="flex items-start justify-between gap-3 px-1">
               <div>
                 <div className="text-[9px] uppercase tracking-[0.2em] text-slate-400">
@@ -118,16 +122,13 @@ export function WelcomeScreen({
               <img
                 src="/assets/scale/sbs3.png"
                 alt="Salmon & Avocado Bowl on SmartBite Scale"
-                className="h-[206px] w-full object-contain object-center select-none"
-                style={{
-                  filter: "brightness(0.96) saturate(1.03)",
-                  transform: "scale(1.04)",
-                }}
+                className="block h-[154px] w-full object-cover object-center select-none"
+                style={{ filter: "brightness(0.96) saturate(1.03)" }}
                 draggable={false}
               />
             </div>
 
-            <div className="mt-2.5 flex items-start justify-between gap-2.5 px-1">
+            <div className="mt-2 flex items-start justify-between gap-2.5 px-1">
               <div className="min-w-0">
                 <div className="flex items-center gap-1 text-[9px] uppercase tracking-wide text-slate-400">
                   <Camera className="h-2.5 w-2.5" />
@@ -159,7 +160,7 @@ export function WelcomeScreen({
             </div>
           </div>
 
-          <div className="mx-4 mt-1.5 mb-2.5 grid gap-1.5">
+          <div className="mx-4 mt-1 mb-2 grid gap-1">
             <FeatureItem
               icon={<Scale className="h-4 w-4 text-blue-600" />}
               title={t("welcome.featureLiveTitle")}
@@ -179,7 +180,7 @@ export function WelcomeScreen({
         </div>
       </div>
 
-      <div className="relative shrink-0 pb-4 pt-2">
+      <div className="relative shrink-0 pt-1.5">
         <Button
           fullWidth
           onClick={() => run(onConnect)}

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ChangeEvent, ComponentProps } from "react";
-import { Camera, ImagePlus, Loader2, Sparkles, StopCircle } from "lucide-react";
+import { Camera, CameraIcon, ImagePlus, Loader2, Sparkles, StopCircle } from "lucide-react";
 import { AnalysisResultCard } from "@/components/cards/AnalysisResultCard";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -55,50 +55,62 @@ export function CaptureScreen({
   const showStableServing = isConnected && measurementStatus === "stable" && stableWeight > 0;
 
   return (
-    <div className="space-y-4">
-      <Card className="p-0">
-        <div className="aspect-[4/5] bg-slate-950">
+    <div className="space-y-3">
+      <Card className="overflow-hidden p-0">
+        <div className="overflow-hidden rounded-[28px] bg-slate-950">
           {cameraReady ? (
-            <div className="h-full w-full overflow-hidden">
+            <div className="aspect-[4/5] w-full">
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
                 muted
-                className="h-full w-full object-cover"
+                className="block h-full w-full object-cover"
               />
             </div>
           ) : (
-            <video
-          src="/assets/scale/scale-demo.mp4"
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="h-full w-full object-cover"
-          onError={() => console.error("Video failed to load: /assets/scale/scale-demo.mp4")}
-        />
+            <div className="aspect-[4/5] w-full">
+              <video
+                src="/assets/scale/scale-demo.mp4"
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="block h-full w-full object-cover"
+                onError={() => console.error("Video failed to load: /assets/scale/scale-demo.mp4")}
+              />
+            </div>
           )}
         </div>
-      </Card>
-
-      <div className="px-4 pt-1 text-center">
-        <h3 className="text-xl font-semibold text-slate-950">{t("capture.readyTitle")}</h3>
-        <p className="mt-2 text-sm leading-6 text-slate-600">{t("capture.readyBody")}</p>
-      </div>
-
-      <Card>
-        <div className="flex gap-3">
-          <Button variant="primary" fullWidth onClick={onStartCamera}>
-            <Camera className="mr-2 h-4 w-4" />
-            {cameraReady ? t("capture.restartCamera") : t("capture.startCamera")}
+        <div className="space-y-3 px-4 pb-4 pt-4">
+          <Button
+            variant="success"
+            fullWidth
+            className="py-4 text-base"
+            onClick={onAnalyzeCamera}
+            disabled={!cameraReady || status === "loading"}
+          >
+            {status === "loading" ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <CameraIcon className="mr-2 h-4 w-4" />
+            )}
+            {t("capture.captureAndAnalyze")}
           </Button>
-          <Button variant="ghost" fullWidth onClick={onStopCamera}>
-            <StopCircle className="mr-2 h-4 w-4" />
-            {t("capture.stop")}
-          </Button>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Button variant="primary" fullWidth onClick={onStartCamera}>
+              <Camera className="mr-2 h-4 w-4" />
+              {cameraReady ? t("capture.restartCamera") : t("capture.startCamera")}
+            </Button>
+            <Button variant="ghost" fullWidth onClick={onStopCamera}>
+              <StopCircle className="mr-2 h-4 w-4" />
+              {t("capture.stop")}
+            </Button>
+          </div>
+          <p className="px-1 text-center text-sm leading-6 text-slate-600">
+            {t("capture.readyBody")}
+          </p>
+          <div className="grid grid-cols-2 gap-3">
           {isDemoMode ? (
             <div className="col-span-2 rounded-3xl bg-slate-50 px-4 py-4">
               <div className="text-sm text-slate-500">Demo estimate</div>
@@ -139,10 +151,11 @@ export function CaptureScreen({
               </div>
             </>
           )}
+          </div>
         </div>
       </Card>
 
-      <Card>
+      <Card className="space-y-4">
         <Field label={t("capture.mealNote")} helper={t("capture.mealNoteHelper")}>
           <Input
             value={note}
@@ -151,24 +164,6 @@ export function CaptureScreen({
           />
         </Field>
 
-        <div className="mt-4 flex gap-3">
-          <Button
-            variant="success"
-            fullWidth
-            onClick={onAnalyzeCamera}
-            disabled={!cameraReady || status === "loading"}
-          >
-            {status === "loading" ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="mr-2 h-4 w-4" />
-            )}
-            {t("capture.captureAndAnalyze")}
-          </Button>
-        </div>
-      </Card>
-
-      <Card>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-sm font-medium text-slate-500">{t("capture.uploadImage")}</div>

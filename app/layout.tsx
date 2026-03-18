@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { LanguageProvider } from "@/hooks/useLanguage";
 
@@ -11,6 +11,12 @@ export const metadata: Metadata = {
     apple: "/assets/icons/apple-touch-icon.png",
   },
   manifest: "/assets/icons/site.webmanifest",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({

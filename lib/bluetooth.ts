@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import {
   LED_CHARACTERISTIC_UUID,
   LED_SERVICE_UUID,
@@ -11,6 +12,18 @@ import type {
   BluetoothRemoteGATTCharacteristicLike,
   DiscoveredDevice,
 } from "@/lib/types";
+
+function isNativeCapacitorPlatform() {
+  return typeof window !== "undefined" && Capacitor.isNativePlatform();
+}
+
+export function getBluetoothUnavailableMessage() {
+  if (isNativeCapacitorPlatform()) {
+    return "Bluetooth scale connection is not available in this Android build yet. Use demo mode for app testing.";
+  }
+
+  return "Bluetooth is not supported in this browser. Please use Chrome or Edge on a supported device.";
+}
 
 export function getBluetooth(): BluetoothLike | null {
   if (typeof navigator === "undefined") {
@@ -28,9 +41,7 @@ export async function requestScaleDevice() {
   const bluetooth = getBluetooth();
 
   if (!bluetooth) {
-    throw new Error(
-      "Bluetooth is not supported in this browser. Please use Chrome or Edge on a supported device.",
-    );
+    throw new Error(getBluetoothUnavailableMessage());
   }
 
   const device = await bluetooth.requestDevice({

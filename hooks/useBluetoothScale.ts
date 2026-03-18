@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   connectScale,
+  getBluetoothUnavailableMessage,
   isBluetoothSupported,
   requestScaleDevice,
   subscribeToWeight,
@@ -35,8 +36,6 @@ type DemoState = {
   phase: DemoPhase;
 };
 
-const DEFAULT_MESSAGE =
-  "Bluetooth is not supported in this browser. Please use Chrome or Edge on a supported device.";
 const DEMO_MESSAGE = "Demo mode active. Simulating scale data.";
 
 function randomBetween(min: number, max: number) {
@@ -307,8 +306,9 @@ export function useBluetoothScale() {
 
   const connect = async () => {
     if (!supported) {
-      setLastMessage(DEFAULT_MESSAGE);
-      return { success: false, message: DEFAULT_MESSAGE };
+      const message = getBluetoothUnavailableMessage();
+      setLastMessage(message);
+      return { success: false, message };
     }
 
     stopDemoMode();

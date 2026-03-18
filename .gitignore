@@ -19,9 +19,12 @@ firmware/arduino-mega-hc06/.pio/
 
 # VS Code
 .vscode/
+.idea/
+android/.idea/
 
 # Native
 *.orig.*
+*.iml
 *.jks
 *.p8
 *.p12

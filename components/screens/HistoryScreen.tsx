@@ -91,13 +91,13 @@ export function HistoryScreen({
               }}
             />
             <motion.div
-              className="fixed inset-0 z-50 h-[100dvh] overflow-hidden bg-[linear-gradient(180deg,#f0f5ff,#e8f0fe)]"
+              className="fixed inset-0 z-50 overflow-hidden bg-[linear-gradient(180deg,#f0f5ff,#e8f0fe)]"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 220, damping: 28 }}
             >
-              <div className="mx-auto flex h-[100dvh] max-w-[430px] flex-col px-4 pb-4 pt-3">
+              <div className="mx-auto flex min-h-screen max-w-[430px] flex-col px-4 pb-4 pt-3">
                 <div className="flex items-center justify-between pb-3">
                   <button
                     type="button"

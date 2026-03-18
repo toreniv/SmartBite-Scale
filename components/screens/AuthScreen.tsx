@@ -193,9 +193,9 @@ export function AuthScreen({
   return (
     <main
       dir={dir}
-      className="min-h-[100dvh] bg-[linear-gradient(180deg,#eff6ff_0%,#dbeafe_100%)] px-5 py-6"
+      className="min-h-screen bg-[linear-gradient(180deg,#eff6ff_0%,#dbeafe_100%)] px-5 py-6"
     >
-      <div className="mx-auto flex min-h-[calc(100dvh-3rem)] max-w-[430px] flex-col justify-center">
+      <div className="mx-auto flex min-h-full max-w-[430px] flex-col justify-center">
         <div className="mb-4 flex justify-end">
           <LanguageSwitcher />
         </div>

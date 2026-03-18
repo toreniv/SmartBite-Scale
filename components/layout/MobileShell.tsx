@@ -23,7 +23,11 @@ export function MobileShell({
   const { dir, t } = useLanguage();
 
   return (
-    <div dir={dir} className="mx-auto min-h-screen max-w-[430px] px-4 pb-28 pt-5">
+    <div
+      dir={dir}
+      className="mx-auto min-h-screen max-w-[430px] px-4 pt-5"
+      style={{ paddingBottom: "calc(5.75rem + env(safe-area-inset-bottom))" }}
+    >
       <div className="mb-5 flex items-center justify-between">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-500">
