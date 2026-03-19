@@ -48,6 +48,7 @@ type ParsedAnalyzeRequest =
     };
 
 type JsonRecord = Record<string, unknown>;
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
 class AIProviderError extends Error {
   code?: AnalyzeMealErrorCode | "TIMEOUT";
@@ -160,6 +161,21 @@ function parseImageDataUrl(imageBase64: string) {
     mimeType: match[1],
     data: match[2].replace(/\s+/g, ""),
   };
+}
+
+function getBase64Payload(imageBase64: string) {
+  const separatorIndex = imageBase64.indexOf(",");
+
+  if (separatorIndex === -1) {
+    return imageBase64.trim();
+  }
+
+  return imageBase64.slice(separatorIndex + 1).replace(/\s+/g, "");
+}
+
+function getApproximateImageSizeBytes(imageBase64: string) {
+  const base64 = getBase64Payload(imageBase64);
+  return Math.ceil(base64.length * 0.75);
 }
 
 function buildMealAnalysisPrompt(request: AnalyzeMealRequest) {
@@ -353,6 +369,33 @@ function buildBackendPrompt(request: AnalyzeMealRequest) {
   ].join("\n");
 }
 
+function getSanitizedErrorResponse(error: AIProviderError) {
+  if (error.code === "TIMEOUT") {
+    return {
+      status: 503,
+      code: "TIMEOUT" as const,
+      message: "Analysis took too long. Please try again.",
+      retryable: true,
+    };
+  }
+
+  if (error.status === 503) {
+    return {
+      status: 503,
+      code: "PROVIDER_UNAVAILABLE" as const,
+      message: "Analysis service is unavailable right now.",
+      retryable: false,
+    };
+  }
+
+  return {
+    status: error.status ?? 502,
+    code: "ANALYSIS_FAILED" as const,
+    message: "Analysis failed. Please try again.",
+    retryable: error.retryable,
+  };
+}
+
 async function generateGeminiText(request: AnalyzeMealRequest) {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
 
@@ -443,6 +486,17 @@ router.post("/", async (request, response) => {
   }
 
   try {
+    if (getApproximateImageSizeBytes(parsed.request.imageBase64) > MAX_IMAGE_BYTES) {
+      return jsonError(
+        response,
+        400,
+        "IMAGE_TOO_LARGE",
+        "Image is too large. Please use a smaller photo.",
+        false,
+        [],
+      );
+    }
+
     const outputText = await generateGeminiText(parsed.request);
     let geminiPayload: Record<string, unknown>;
 
@@ -468,13 +522,16 @@ router.post("/", async (request, response) => {
 
     return response.status(200).json(payload);
   } catch (error) {
+    console.error("Meal analysis backend error:", error);
+
     if (error instanceof AIProviderError) {
+      const sanitized = getSanitizedErrorResponse(error);
       return jsonError(
         response,
-        error.status ?? 502,
-        error.code ?? (error.status === 503 ? "PROVIDER_UNAVAILABLE" : "ANALYSIS_FAILED"),
-        error.message,
-        error.retryable,
+        sanitized.status,
+        sanitized.code,
+        sanitized.message,
+        sanitized.retryable,
         [toProviderAttempt("failed")],
       );
     }
