@@ -19,6 +19,21 @@ app.use(express.json({ limit: "20mb" }));
 app.use("/api/analyze", analyzeRouter);
 
 app.use((error: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "type" in error &&
+    error.type === "entity.too.large"
+  ) {
+    return res.status(413).json({
+      error: {
+        code: "IMAGE_TOO_LARGE",
+        message: "Image is too large. Please use a smaller photo.",
+        retryable: false,
+      },
+    });
+  }
+
   if (error instanceof SyntaxError && "body" in error) {
     return res.status(400).json({
       error: {

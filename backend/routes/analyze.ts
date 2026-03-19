@@ -16,6 +16,7 @@ const router = Router();
 
 const APP_DISCLAIMER = "";
 const GEMINI_MODEL = "gemini-1.5-flash";
+const GEMINI_TIMEOUT_MS = 25_000;
 const JSON_BLOCK_PATTERN = /```json\s*([\s\S]*?)```/i;
 const DATA_URL_PATTERN = /^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=\s]+)$/;
 const BACKEND_SYSTEM_PROMPT = [
@@ -49,6 +50,7 @@ type ParsedAnalyzeRequest =
 type JsonRecord = Record<string, unknown>;
 
 class AIProviderError extends Error {
+  code?: AnalyzeMealErrorCode | "TIMEOUT";
   status?: number;
   retryable: boolean;
   cause?: unknown;
@@ -56,6 +58,7 @@ class AIProviderError extends Error {
   constructor(
     message: string,
     options?: {
+      code?: AnalyzeMealErrorCode | "TIMEOUT";
       cause?: unknown;
       retryable?: boolean;
       status?: number;
@@ -63,6 +66,7 @@ class AIProviderError extends Error {
   ) {
     super(message);
     this.name = "AIProviderError";
+    this.code = options?.code;
     this.status = options?.status;
     this.retryable = options?.retryable ?? true;
     this.cause = options?.cause;
@@ -213,7 +217,7 @@ function toProviderAttempt(
 function jsonError(
   response: Response,
   status: number,
-  code: AnalyzeMealErrorCode,
+  code: AnalyzeMealErrorCode | "TIMEOUT",
   message: string,
   retryable: boolean,
   attempts: AnalyzeMealErrorResponse["attempts"] = [],
@@ -367,14 +371,29 @@ async function generateGeminiText(request: AnalyzeMealRequest) {
   });
 
   try {
-    const result = await model.generateContent([
-      { text: buildBackendPrompt(request) },
-      {
-        inlineData: {
-          mimeType: image.mimeType,
-          data: image.data,
+    const result = await Promise.race([
+      model.generateContent([
+        { text: buildBackendPrompt(request) },
+        {
+          inlineData: {
+            mimeType: image.mimeType,
+            data: image.data,
+          },
         },
-      },
+      ]),
+      new Promise<never>((_, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(
+            new AIProviderError("Analysis took too long. Please try again.", {
+              code: "TIMEOUT",
+              retryable: true,
+              status: 503,
+            }),
+          );
+        }, GEMINI_TIMEOUT_MS);
+
+        return () => clearTimeout(timeoutId);
+      }),
     ]);
 
     const text = result.response.text().trim();
@@ -447,7 +466,7 @@ router.post("/", async (request, response) => {
       return jsonError(
         response,
         error.status ?? 502,
-        error.status === 503 ? "PROVIDER_UNAVAILABLE" : "ANALYSIS_FAILED",
+        error.code ?? (error.status === 503 ? "PROVIDER_UNAVAILABLE" : "ANALYSIS_FAILED"),
         error.message,
         error.retryable,
         [toProviderAttempt("failed")],
