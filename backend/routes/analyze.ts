@@ -222,7 +222,7 @@ function jsonError(
   retryable: boolean,
   attempts: AnalyzeMealErrorResponse["attempts"] = [],
 ) {
-  const payload: AnalyzeMealErrorResponse = {
+  const payload = {
     error: {
       code,
       message,
@@ -370,7 +370,21 @@ async function generateGeminiText(request: AnalyzeMealRequest) {
     systemInstruction: BACKEND_SYSTEM_PROMPT,
   });
 
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
   try {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(
+          new AIProviderError("Analysis took too long. Please try again.", {
+            code: "TIMEOUT",
+            retryable: true,
+            status: 503,
+          }),
+        );
+      }, GEMINI_TIMEOUT_MS);
+    });
+
     const result = await Promise.race([
       model.generateContent([
         { text: buildBackendPrompt(request) },
@@ -381,19 +395,7 @@ async function generateGeminiText(request: AnalyzeMealRequest) {
           },
         },
       ]),
-      new Promise<never>((_, reject) => {
-        const timeoutId = setTimeout(() => {
-          reject(
-            new AIProviderError("Analysis took too long. Please try again.", {
-              code: "TIMEOUT",
-              retryable: true,
-              status: 503,
-            }),
-          );
-        }, GEMINI_TIMEOUT_MS);
-
-        return () => clearTimeout(timeoutId);
-      }),
+      timeoutPromise,
     ]);
 
     const text = result.response.text().trim();
@@ -419,6 +421,10 @@ async function generateGeminiText(request: AnalyzeMealRequest) {
         status: 502,
       },
     );
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
   }
 }
 
