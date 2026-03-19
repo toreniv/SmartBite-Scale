@@ -28,11 +28,25 @@ function getApiBaseUrl() {
   return parsedUrl.toString().replace(/\/+$/, "");
 }
 
+function isStandaloneStaticRuntime() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return window.location.protocol === "capacitor:" || window.location.protocol === "file:";
+}
+
 export function buildApiUrl(path: string) {
   const normalizedPath = normalizeApiPath(path);
   const baseUrl = getApiBaseUrl();
 
   if (!baseUrl) {
+    if (isStandaloneStaticRuntime()) {
+      throw new Error(
+        "Backend URL not configured. Set NEXT_PUBLIC_API_BASE_URL to connect to the analysis server.",
+      );
+    }
+
     return normalizedPath;
   }
 
