@@ -7,6 +7,7 @@ import { buildDailyProgress, buildRecommendations, isToday } from "@/lib/nutriti
 import { readStorage, writeStorage } from "@/lib/storage";
 import type {
   AnalyzeMealErrorResponse,
+  AnalyzeMealErrorCode,
   AnalyzeMealResponse,
   MealHistoryItem,
   RecommendationItem,
@@ -14,6 +15,16 @@ import type {
 } from "@/lib/types";
 
 type AnalysisStatus = "idle" | "loading" | "success" | "error";
+type AnalysisErrorState = {
+  code: AnalyzeMealErrorCode | "UNKNOWN";
+  message: string;
+  canRetry: boolean;
+};
+
+type AnalysisErrorLike = {
+  code?: string;
+  message?: string;
+};
 
 function fileToDataUrl(file: Blob) {
   return new Promise<string>((resolve, reject) => {
@@ -24,12 +35,74 @@ function fileToDataUrl(file: Blob) {
   });
 }
 
+function isAnalysisErrorLike(value: unknown): value is AnalysisErrorLike {
+  return typeof value === "object" && value !== null;
+}
+
+function createAnalysisError(error: AnalysisErrorState) {
+  const wrapped = new Error(error.message) as Error & {
+    code: AnalysisErrorState["code"];
+    canRetry: boolean;
+  };
+
+  wrapped.name = "AnalysisError";
+  wrapped.code = error.code;
+  wrapped.canRetry = error.canRetry;
+
+  return wrapped;
+}
+
+function normalizeAnalysisError(error: unknown): AnalysisErrorState {
+  const code = isAnalysisErrorLike(error) && typeof error.code === "string" ? error.code : "";
+  const message = error instanceof Error ? error.message : isAnalysisErrorLike(error) ? error.message || "" : "";
+
+  if (code === "TIMEOUT") {
+    return {
+      code,
+      message: "Gemini is taking too long. Please try again.",
+      canRetry: true,
+    };
+  }
+
+  if (code === "IMAGE_TOO_LARGE") {
+    return {
+      code,
+      message: "Photo is too large. Try a closer shot.",
+      canRetry: false,
+    };
+  }
+
+  if (
+    code === "PROVIDER_UNAVAILABLE" ||
+    message.includes("Backend URL not configured") ||
+    message.includes("NEXT_PUBLIC_API_BASE_URL")
+  ) {
+    return {
+      code: code === "PROVIDER_UNAVAILABLE" ? code : "UNKNOWN",
+      message: "Not connected to analysis server.",
+      canRetry: false,
+    };
+  }
+
+  return {
+    code: code && typeof code === "string" ? (code as AnalysisErrorState["code"]) : "UNKNOWN",
+    message: "Analysis failed. Please try again.",
+    canRetry: true,
+  };
+}
+
 async function readAnalyzeError(response: Response) {
   try {
     const payload = (await response.json()) as AnalyzeMealErrorResponse;
-    return payload.error?.message?.trim() || "";
+    return {
+      code: payload.error?.code,
+      message: payload.error?.message?.trim() || "",
+    };
   } catch {
-    return "";
+    return {
+      code: undefined,
+      message: "",
+    };
   }
 }
 
@@ -42,6 +115,7 @@ export function useMealAnalysis(
   const [result, setResult] = useState<AnalyzeMealResponse | null>(null);
   const [status, setStatus] = useState<AnalysisStatus>("idle");
   const [error, setError] = useState("");
+  const [analysisError, setAnalysisError] = useState<AnalysisErrorState | null>(null);
   const [disclaimer, setDisclaimer] = useState(APP_DISCLAIMER);
 
   useEffect(() => {
@@ -70,6 +144,7 @@ export function useMealAnalysis(
   const analyzeImage = async (file: Blob, note: string, measuredWeightGrams?: number) => {
     setStatus("loading");
     setError("");
+    setAnalysisError(null);
 
     try {
       const imageBase64 = await fileToDataUrl(file);
@@ -90,14 +165,14 @@ export function useMealAnalysis(
       });
 
       if (!response.ok) {
-        const message = await readAnalyzeError(response);
-        throw new Error(message || "Analysis failed.");
+        throw await readAnalyzeError(response);
       }
 
       const data = (await response.json()) as AnalyzeMealResponse;
 
       setResult(data);
       setDisclaimer(data.disclaimer);
+      setAnalysisError(null);
       setStatus("success");
 
       const meal: MealHistoryItem = {
@@ -112,10 +187,11 @@ export function useMealAnalysis(
       setHistory((current) => [meal, ...current].slice(0, 20));
       return meal;
     } catch (nextError) {
-      const message = nextError instanceof Error ? nextError.message : "Analysis failed.";
-      setError(message);
+      const normalizedError = normalizeAnalysisError(nextError);
+      setError(normalizedError.message);
+      setAnalysisError(normalizedError);
       setStatus("error");
-      throw nextError;
+      throw createAnalysisError(normalizedError);
     }
   };
 
@@ -125,6 +201,7 @@ export function useMealAnalysis(
 
   return {
     analyzeImage,
+    analysisError,
     dailyProgress,
     disclaimer,
     error,

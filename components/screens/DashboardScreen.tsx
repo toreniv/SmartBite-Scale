@@ -23,6 +23,7 @@ export function DashboardScreen({
   metrics,
   progress,
   latestResult,
+  latestResultImageUrl,
   measuredWeight,
   disclaimer,
   recommendations,
@@ -40,6 +41,7 @@ export function DashboardScreen({
   metrics: HealthMetrics;
   progress: DailyProgress;
   latestResult: MealAnalysisResult | null;
+  latestResultImageUrl?: string | null;
   measuredWeight: number;
   disclaimer: string;
   recommendations: RecommendationItem[];
@@ -120,6 +122,7 @@ export function DashboardScreen({
       {latestResult ? (
         <AnalysisResultCard
           result={latestResult}
+          imageUrl={latestResultImageUrl}
           measuredWeight={measuredWeight}
           disclaimer={disclaimer}
           isDemoMode={isDemoMode}

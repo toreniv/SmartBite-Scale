@@ -29,7 +29,9 @@ export type AnalysisProvider = "openai" | "gemini" | "mock";
 export type AnalyzeMealErrorCode =
   | "INVALID_REQUEST"
   | "PROVIDER_UNAVAILABLE"
-  | "ANALYSIS_FAILED";
+  | "ANALYSIS_FAILED"
+  | "TIMEOUT"
+  | "IMAGE_TOO_LARGE";
 
 export type PermissionStateLike = "granted" | "denied" | "prompt" | "unknown";
 

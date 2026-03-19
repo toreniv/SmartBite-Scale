@@ -36,6 +36,11 @@ export function SmartBiteApp() {
   const [mealNote, setMealNote] = useState("");
   const [toast, setToast] = useState("");
   const [profileAuthOpen, setProfileAuthOpen] = useState(false);
+  const [lastAnalysisRequest, setLastAnalysisRequest] = useState<{
+    blob: Blob;
+    note: string;
+    measuredWeight?: number;
+  } | null>(null);
 
   const bluetooth = useBluetoothScale();
   const camera = useCamera();
@@ -156,15 +161,28 @@ export function SmartBiteApp() {
     setPreviewUrl(URL.createObjectURL(file));
   };
 
-  const analyzeBlob = async (blob: Blob) => {
-    const analysisWeight = measuredWeight;
+  const analyzeBlob = async (
+    blob: Blob,
+    options?: {
+      note?: string;
+      measuredWeight?: number;
+    },
+  ) => {
+    const analysisWeight = options?.measuredWeight ?? measuredWeight;
+    const analysisNote = options?.note ?? mealNote;
+
+    setLastAnalysisRequest({
+      blob,
+      note: analysisNote,
+      measuredWeight: analysisWeight,
+    });
 
     try {
       if (bluetooth.isBypassMode && analysisWeight) {
         bluetooth.lockDemoWeight(analysisWeight);
       }
 
-      await analysis.analyzeImage(blob, mealNote, analysisWeight);
+      await analysis.analyzeImage(blob, analysisNote, analysisWeight);
       showToast(t("toasts.mealEstimateReady"));
       setSection("home");
     } catch (error) {
@@ -190,8 +208,20 @@ export function SmartBiteApp() {
     await analyzeBlob(selectedUploadFile);
   };
 
+  const handleRetryAnalysis = async () => {
+    if (!lastAnalysisRequest) {
+      return;
+    }
+
+    await analyzeBlob(lastAnalysisRequest.blob, {
+      note: lastAnalysisRequest.note,
+      measuredWeight: lastAnalysisRequest.measuredWeight,
+    });
+  };
+
   const latestMeal = analysis.history[0] ?? null;
   const latestResult = analysis.result ?? latestMeal;
+  const latestResultImageUrl = latestMeal?.imageDataUrl ?? previewUrl;
   const latestMealWeight =
     latestMeal?.measuredWeightGrams ?? latestMeal?.estimatedWeightGrams ?? measuredWeight;
   const lastServingEvent = bluetooth.lastServingEvent
@@ -237,14 +267,15 @@ export function SmartBiteApp() {
     );
   } else if (section === "home") {
     activeScreen = (
-      <DashboardScreen
-        profile={profile}
-        metrics={metrics}
-        progress={analysis.dailyProgress}
-        latestResult={latestResult}
-        measuredWeight={latestMealWeight ?? 0}
-        disclaimer={analysis.disclaimer}
-        recommendations={analysis.recommendations}
+        <DashboardScreen
+          profile={profile}
+          metrics={metrics}
+          progress={analysis.dailyProgress}
+          latestResult={latestResult}
+          latestResultImageUrl={latestResultImageUrl}
+          measuredWeight={latestMealWeight ?? 0}
+          disclaimer={analysis.disclaimer}
+          recommendations={analysis.recommendations}
         isConnected={bluetooth.isConnected}
         isDemoMode={bluetooth.isBypassMode}
         latestWeight={bluetooth.latestWeight}
@@ -261,9 +292,9 @@ export function SmartBiteApp() {
     );
   } else if (section === "capture") {
     activeScreen = (
-      <CaptureScreen
-        videoRef={camera.videoRef}
-        previewUrl={previewUrl}
+        <CaptureScreen
+          videoRef={camera.videoRef}
+          previewUrl={previewUrl}
         note={mealNote}
         onNoteChange={setMealNote}
         onStartCamera={async () => {
@@ -282,12 +313,15 @@ export function SmartBiteApp() {
         isConnected={bluetooth.isConnected}
         isDemoMode={bluetooth.isBypassMode}
         measurementStatus={bluetooth.measurementStatus}
-        stableWeight={bluetooth.stableWeight}
-        latestWeight={bluetooth.latestWeight}
-        result={latestResult}
-        disclaimer={analysis.disclaimer}
-        navDirection={navDirection}
-      />
+          stableWeight={bluetooth.stableWeight}
+          latestWeight={bluetooth.latestWeight}
+          result={latestResult}
+          resultImageUrl={previewUrl ?? latestMeal?.imageDataUrl ?? null}
+          analysisError={analysis.analysisError}
+          disclaimer={analysis.disclaimer}
+          onRetryAnalysis={handleRetryAnalysis}
+          navDirection={navDirection}
+        />
     );
   } else if (section === "history") {
     activeScreen = (
