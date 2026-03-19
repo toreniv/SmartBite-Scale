@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/Card";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { useLanguage } from "@/hooks/useLanguage";
 import type {
+  BluetoothConnectionStatus,
   DailyProgress,
   HealthMetrics,
   MealAnalysisResult,
@@ -29,12 +30,19 @@ export function DashboardScreen({
   recommendations,
   isConnected,
   isDemoMode,
+  bluetoothEnabled,
+  connectionStatus,
+  isReconnecting,
+  isStreamEnabled,
+  hasConfirmedPong,
   latestWeight,
   stableWeight,
   measurementStatus,
+  lastBluetoothMessage,
   navDirection,
   onConnectScale,
   onTare,
+  onToggleStream,
   onGoCapture,
 }: {
   profile: UserProfile;
@@ -42,17 +50,24 @@ export function DashboardScreen({
   progress: DailyProgress;
   latestResult: MealAnalysisResult | null;
   latestResultImageUrl?: string | null;
-  measuredWeight: number;
+  measuredWeight: number | null;
   disclaimer: string;
   recommendations: RecommendationItem[];
   isConnected: boolean;
   isDemoMode: boolean;
+  bluetoothEnabled: boolean;
+  connectionStatus: BluetoothConnectionStatus;
+  isReconnecting: boolean;
+  isStreamEnabled: boolean;
+  hasConfirmedPong: boolean;
   latestWeight: number;
   stableWeight: number;
   measurementStatus: "disconnected" | "idle" | "measuring" | "stable";
+  lastBluetoothMessage: string;
   navDirection: NavDirection;
   onConnectScale: () => void;
   onTare: () => void;
+  onToggleStream: (enabled: boolean) => void;
   onGoCapture: () => void;
 }) {
   const { t } = useLanguage();
@@ -112,11 +127,18 @@ export function DashboardScreen({
       <ScaleStatusCard
         isConnected={isConnected}
         isDemoMode={isDemoMode}
+        bluetoothEnabled={bluetoothEnabled}
+        connectionStatus={connectionStatus}
+        isReconnecting={isReconnecting}
+        isStreamEnabled={isStreamEnabled}
+        hasConfirmedPong={hasConfirmedPong}
         latestWeight={latestWeight}
         stableWeight={stableWeight}
         measurementStatus={measurementStatus}
+        lastMessage={lastBluetoothMessage}
         onConnect={onConnectScale}
         onTare={onTare}
+        onToggleStream={onToggleStream}
       />
 
       {latestResult ? (
@@ -125,7 +147,6 @@ export function DashboardScreen({
           imageUrl={latestResultImageUrl}
           measuredWeight={measuredWeight}
           disclaimer={disclaimer}
-          isDemoMode={isDemoMode}
         />
       ) : (
         <Card>

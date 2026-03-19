@@ -38,6 +38,13 @@ export const MEAL_ANALYSIS_JSON_SCHEMA = {
       type: "number",
       description: "Estimated fat in grams.",
     },
+    ingredients: {
+      type: "array",
+      description: "Short list of likely visible ingredients or meal components.",
+      items: {
+        type: "string",
+      },
+    },
     confidence: {
       type: "number",
       description: "Confidence from 0 to 1.",
@@ -54,6 +61,7 @@ export const MEAL_ANALYSIS_JSON_SCHEMA = {
     "protein",
     "carbs",
     "fat",
+    "ingredients",
     "confidence",
     "explanation",
   ],
@@ -75,11 +83,13 @@ export class AIProviderError extends Error {
   status?: number;
   retryable: boolean;
   cause?: unknown;
+  attempts?: AnalyzeMealProviderAttempt[];
 
   constructor(
     provider: AnalysisProvider,
     message: string,
     options?: {
+      attempts?: AnalyzeMealProviderAttempt[];
       cause?: unknown;
       retryable?: boolean;
       status?: number;
@@ -91,6 +101,7 @@ export class AIProviderError extends Error {
     this.status = options?.status;
     this.retryable = options?.retryable ?? true;
     this.cause = options?.cause;
+    this.attempts = options?.attempts;
   }
 }
 
@@ -199,6 +210,13 @@ export function normalizeAnalysisResult(
   const protein = Math.round(Math.max(toFiniteNumber(record.protein, 0), 0));
   const carbs = Math.round(Math.max(toFiniteNumber(record.carbs, 0), 0));
   const fat = Math.round(Math.max(toFiniteNumber(record.fat, 0), 0));
+  const ingredients = Array.isArray(record.ingredients)
+    ? record.ingredients
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .slice(0, 8)
+    : [];
   const confidence = Number(clamp(toFiniteNumber(record.confidence, 0.72), 0, 1).toFixed(2));
 
   return {
@@ -208,6 +226,7 @@ export function normalizeAnalysisResult(
     protein,
     carbs,
     fat,
+    ingredients,
     confidence,
     explanation: toNonEmptyString(
       record.explanation,

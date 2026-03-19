@@ -153,6 +153,7 @@ export function CaptureScreen({
   const { t } = useLanguage();
   const estimatedWeight = stableWeight || latestWeight;
   const showStableServing = isConnected && measurementStatus === "stable" && stableWeight > 0;
+  const analysisMeasuredWeight = isConnected ? stableWeight || latestWeight : null;
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [showLivePreview, setShowLivePreview] = useState(false);
   const [capturedPreviewUrl, setCapturedPreviewUrl] = useState<string | null>(null);
@@ -276,12 +277,12 @@ export function CaptureScreen({
           <div className="grid grid-cols-2 gap-3">
           {isDemoMode ? (
             <div className="col-span-2 rounded-3xl bg-slate-50 px-4 py-4">
-              <div className="text-sm text-slate-500">Demo estimate</div>
+              <div className="text-sm text-slate-500">Estimated serving</div>
               <div className="mt-2 text-2xl font-semibold text-slate-950">
                 ~{estimatedWeight.toFixed(0)}
                 {t("common.gramsShort")}
               </div>
-              <div className="mt-1 text-xs text-slate-400">estimated weight</div>
+              <div className="mt-1 text-xs text-slate-400">Demo scale mode only</div>
             </div>
           ) : (
             <>
@@ -383,9 +384,8 @@ export function CaptureScreen({
         <AnalysisResultCard
           result={result}
           imageUrl={resultImageUrl}
-          measuredWeight={stableWeight || latestWeight}
+          measuredWeight={analysisMeasuredWeight}
           disclaimer={disclaimer}
-          isDemoMode={isDemoMode}
         />
       ) : null}
     </div>

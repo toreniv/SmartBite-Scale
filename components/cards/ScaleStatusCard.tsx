@@ -4,7 +4,7 @@ import { Radio, Ruler, Scale } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { useLanguage } from "@/hooks/useLanguage";
-import type { MeasurementStatus } from "@/lib/types";
+import type { BluetoothConnectionStatus, MeasurementStatus } from "@/lib/types";
 
 const statusTone: Record<MeasurementStatus, string> = {
   disconnected: "bg-slate-100 text-slate-500",
@@ -16,23 +16,47 @@ const statusTone: Record<MeasurementStatus, string> = {
 export function ScaleStatusCard({
   isConnected,
   isDemoMode,
+  bluetoothEnabled,
+  connectionStatus,
+  isReconnecting,
+  isStreamEnabled,
+  hasConfirmedPong,
   latestWeight,
   stableWeight,
   measurementStatus,
+  lastMessage,
   onConnect,
   onTare,
+  onToggleStream,
 }: {
   isConnected: boolean;
   isDemoMode: boolean;
+  bluetoothEnabled: boolean;
+  connectionStatus: BluetoothConnectionStatus;
+  isReconnecting: boolean;
+  isStreamEnabled: boolean;
+  hasConfirmedPong: boolean;
   latestWeight: number;
   stableWeight: number;
   measurementStatus: MeasurementStatus;
+  lastMessage?: string;
   onConnect: () => void;
   onTare: () => void;
+  onToggleStream: (enabled: boolean) => void;
 }) {
   const { t } = useLanguage();
   const estimatedWeight = stableWeight || latestWeight;
   const showStableServing = isConnected && measurementStatus === "stable" && stableWeight > 0;
+  const buttonLabel = isConnected
+    ? t("dashboard.reconnectScale")
+    : !bluetoothEnabled && !isDemoMode
+      ? "Enable Bluetooth"
+      : "Connect Bluetooth Classic";
+  const connectionBadge = isConnected && hasConfirmedPong
+    ? { label: "Connected", className: "bg-emerald-100 text-emerald-700" }
+    : isReconnecting || connectionStatus === "reconnecting" || connectionStatus === "connecting"
+      ? { label: "Reconnecting...", className: "bg-amber-100 text-amber-700" }
+      : { label: "Disconnected", className: "bg-rose-100 text-rose-700" };
 
   return (
     <Card>
@@ -44,6 +68,8 @@ export function ScaleStatusCard({
               ? t("dashboard.readyForMeasurement")
               : isDemoMode
                 ? "Demo Mode active"
+                : !bluetoothEnabled
+                  ? "Please enable Bluetooth"
                 : t("dashboard.connectForMeasuredWeight")}
           </div>
           {isDemoMode ? (
@@ -64,9 +90,30 @@ export function ScaleStatusCard({
             isDemoMode ? "bg-slate-100 text-slate-500" : statusTone[measurementStatus]
           }`}
         >
-          {isDemoMode ? "Estimated readings" : t(`common.measurementStatus.${measurementStatus}`)}
+          {isDemoMode
+            ? "Estimated readings"
+            : isConnected
+              ? t(`common.measurementStatus.${measurementStatus}`)
+              : connectionStatus === "scanning"
+                ? "Scanning"
+                : connectionStatus === "connecting"
+                  ? "Connecting"
+                  : !bluetoothEnabled
+                    ? "Bluetooth off"
+                    : "Disconnected"}
         </span>
+        {!isDemoMode ? (
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${connectionBadge.className}`}>
+            {connectionBadge.label}
+          </span>
+        ) : null}
       </div>
+
+      {!isDemoMode && lastMessage ? (
+        <div className="mt-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm text-slate-700">
+          {lastMessage}
+        </div>
+      ) : null}
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         {isDemoMode ? (
@@ -122,12 +169,32 @@ export function ScaleStatusCard({
 
       <div className="mt-4 flex gap-3">
         <Button variant={isConnected ? "secondary" : "primary"} onClick={onConnect} fullWidth>
-          {isConnected ? t("dashboard.reconnectScale") : t("common.connectScale")}
+          {buttonLabel}
         </Button>
         <Button variant="ghost" onClick={onTare} fullWidth>
           {t("dashboard.tare")}
         </Button>
       </div>
+
+      {!isDemoMode && isConnected ? (
+        <div className="mt-3 flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+              Developer
+            </div>
+            <div className="mt-1 text-sm text-slate-600">
+              Live stream: {isStreamEnabled ? "ON" : "OFF"}
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            className="rounded-full px-3 py-2 text-xs"
+            onClick={() => onToggleStream(!isStreamEnabled)}
+          >
+            {isStreamEnabled ? "Turn off" : "Turn on"}
+          </Button>
+        </div>
+      ) : null}
     </Card>
   );
 }

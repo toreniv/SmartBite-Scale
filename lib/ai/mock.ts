@@ -4,6 +4,7 @@ import { normalizeAnalysisResult } from "@/lib/ai/normalize";
 const MOCK_MEALS = [
   {
     foodName: "Chicken rice bowl",
+    ingredients: ["chicken", "rice", "vegetables"],
     caloriesPerGram: 1.72,
     proteinPerGram: 0.084,
     carbsPerGram: 0.112,
@@ -11,6 +12,7 @@ const MOCK_MEALS = [
   },
   {
     foodName: "Avocado toast",
+    ingredients: ["bread", "avocado", "olive oil"],
     caloriesPerGram: 2.35,
     proteinPerGram: 0.051,
     carbsPerGram: 0.166,
@@ -18,6 +20,7 @@ const MOCK_MEALS = [
   },
   {
     foodName: "Pasta with tomato sauce",
+    ingredients: ["pasta", "tomato sauce", "parmesan"],
     caloriesPerGram: 1.58,
     proteinPerGram: 0.048,
     carbsPerGram: 0.208,
@@ -25,6 +28,7 @@ const MOCK_MEALS = [
   },
   {
     foodName: "Greek yogurt fruit bowl",
+    ingredients: ["greek yogurt", "berries", "granola"],
     caloriesPerGram: 1.14,
     proteinPerGram: 0.079,
     carbsPerGram: 0.124,
@@ -49,6 +53,7 @@ export async function analyzeMealWithMock(request: AnalyzeMealRequest) {
       protein: estimatedWeightGrams * preset.proteinPerGram,
       carbs: estimatedWeightGrams * preset.carbsPerGram,
       fat: estimatedWeightGrams * preset.fatPerGram,
+      ingredients: preset.ingredients,
       confidence: request.measuredWeightGrams ? 0.82 : 0.68,
       explanation:
         "This is a mock estimate generated from portion heuristics because no real AI provider key is configured.",

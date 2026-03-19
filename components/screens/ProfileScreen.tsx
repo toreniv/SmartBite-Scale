@@ -1,12 +1,29 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
-import { Bell, ChevronDown, ChevronRight, Lock, LogOut, Trash2, UserRound } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Bell,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Lock,
+  LogOut,
+  Trash2,
+  UserRound,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { useLanguage } from "@/hooks/useLanguage";
+import {
+  clearDebugLogs,
+  formatDebugLogsAsText,
+  getDebugLogs,
+  subscribeToDebugLogs,
+  type DebugLogEntry,
+} from "@/lib/debugLog";
 import { logoutUser } from "@/lib/localAuth";
 import type {
   ActivityLevel,
@@ -98,6 +115,11 @@ export function ProfileScreen({
   currentUser,
   onSignIn,
   onSignOut,
+  isScaleConnected,
+  currentScaleWeight,
+  currentCalibrationFactor,
+  onRunCalibrationTare,
+  onSaveCalibrationFactor,
 }: {
   profile: UserProfile;
   metrics: HealthMetrics;
@@ -106,17 +128,29 @@ export function ProfileScreen({
   currentUser: User | null;
   onSignIn: () => void;
   onSignOut: () => void;
+  isScaleConnected: boolean;
+  currentScaleWeight: number;
+  currentCalibrationFactor: number;
+  onRunCalibrationTare: () => Promise<{ success: boolean; message: string }>;
+  onSaveCalibrationFactor: (value: number) => void;
 }) {
   const { t } = useLanguage();
   const [accountOpen, setAccountOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [developerOpen, setDeveloperOpen] = useState(false);
+  const [debugLogsOpen, setDebugLogsOpen] = useState(false);
   const [showSignOutToast, setShowSignOutToast] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [knownWeightGrams, setKnownWeightGrams] = useState("200");
+  const [suggestedCalibrationFactor, setSuggestedCalibrationFactor] = useState<number | null>(null);
+  const [calibrationMessage, setCalibrationMessage] = useState("");
+  const [copiedCalibrationCommand, setCopiedCalibrationCommand] = useState(false);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(
     DEFAULT_NOTIFICATION_SETTINGS,
   );
   const [privacySettings, setPrivacySettings] = useState<PrivacySettings>(DEFAULT_PRIVACY_SETTINGS);
+  const [debugLogs, setDebugLogs] = useState<DebugLogEntry[]>([]);
   const bannerName = currentUser?.name?.trim() || "User";
   const bannerInitial = bannerName.charAt(0).toUpperCase();
 
@@ -128,6 +162,23 @@ export function ProfileScreen({
     const timeout = window.setTimeout(() => setShowSignOutToast(false), 2500);
     return () => window.clearTimeout(timeout);
   }, [showSignOutToast]);
+
+  useEffect(() => {
+    if (!copiedCalibrationCommand) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setCopiedCalibrationCommand(false), 1800);
+    return () => window.clearTimeout(timeout);
+  }, [copiedCalibrationCommand]);
+
+  useEffect(() => {
+    setDebugLogs(getDebugLogs());
+
+    return subscribeToDebugLogs(() => {
+      setDebugLogs(getDebugLogs());
+    });
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -220,6 +271,54 @@ export function ProfileScreen({
     "very-active",
   ];
   const goalOptions: GoalType[] = ["lose-weight", "maintain", "gain-muscle"];
+  const liveCalibrationReading = Number((currentScaleWeight || 0).toFixed(2));
+  const reversedDebugLogs = useMemo(() => [...debugLogs].reverse(), [debugLogs]);
+
+  const handleCalculateCalibration = () => {
+    const knownWeight = Number(knownWeightGrams);
+
+    if (!Number.isFinite(knownWeight) || knownWeight <= 0) {
+      setCalibrationMessage("Enter a known weight in grams before calculating.");
+      setSuggestedCalibrationFactor(null);
+      return;
+    }
+
+    if (!isScaleConnected || liveCalibrationReading <= 0) {
+      setCalibrationMessage("Connect the scale and place the known weight before calculating.");
+      setSuggestedCalibrationFactor(null);
+      return;
+    }
+
+    const derivedFactor = currentCalibrationFactor * (liveCalibrationReading / knownWeight);
+    setSuggestedCalibrationFactor(Number(derivedFactor.toFixed(4)));
+    setCalibrationMessage(
+      "Suggested calibration saved in the app flow. Firmware support is still required before hardware can apply it.",
+    );
+  };
+
+  const handleRecalibrate = () => {
+    setKnownWeightGrams("200");
+    setSuggestedCalibrationFactor(null);
+    setCalibrationMessage("");
+    setCopiedCalibrationCommand(false);
+  };
+
+  const handleCopyCalibrationCommand = async () => {
+    if (suggestedCalibrationFactor === null || typeof navigator === "undefined" || !navigator.clipboard) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(`CALIBRATE:${suggestedCalibrationFactor.toFixed(4)}`);
+    setCopiedCalibrationCommand(true);
+  };
+
+  const handleCopyAllLogs = async () => {
+    if (typeof navigator === "undefined" || !navigator.clipboard) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(formatDebugLogsAsText(reversedDebugLogs));
+  };
 
   return (
     <div className="relative space-y-4 pb-14">
@@ -492,6 +591,126 @@ export function ProfileScreen({
           </button>
         )}
       </div>
+      <Card className="overflow-hidden border-amber-200 bg-[linear-gradient(145deg,rgba(255,247,237,0.98),rgba(255,255,255,0.95))]">
+        <div className="text-sm font-medium text-amber-700">Scale Calibration</div>
+        <div className="mt-1 text-2xl font-semibold text-slate-950">
+          Calibration factor: stored locally (pending firmware support)
+        </div>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          SmartBite can calculate and save a suggested factor locally, but the Arduino firmware does
+          not yet confirm or apply <code>CALIBRATE:&lt;float&gt;</code>.
+        </p>
+
+        <div className="mt-4 rounded-[24px] bg-amber-100 px-4 py-3 text-sm text-amber-900">
+          To apply this calibration, update your Arduino firmware to handle the
+          CALIBRATE:&lt;float&gt; command and reflash.
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <MetricTile
+            label="Current factor"
+            value={currentCalibrationFactor.toFixed(4)}
+            hint="Stored locally on this device"
+          />
+          <MetricTile
+            label="Live reading"
+            value={`${liveCalibrationReading.toFixed(2)} g`}
+            hint={isScaleConnected ? "From the connected scale stream" : "Connect the scale first"}
+          />
+        </div>
+
+        <div className="mt-5 flex items-center gap-3">
+          <Button variant="secondary" onClick={handleRecalibrate} disabled={!isScaleConnected}>
+            Recalibrate
+          </Button>
+          {!isScaleConnected ? (
+            <span className="text-sm text-slate-500">Connect your scale to calibrate</span>
+          ) : null}
+        </div>
+
+        <div className="mt-5 space-y-4">
+          <div className="rounded-[24px] bg-white/90 px-4 py-4">
+            <div className="text-sm font-semibold text-slate-900">1. Place nothing on scale</div>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              Remove everything from the scale, then send <code>TARE</code> and wait for <code>TARE_DONE</code>.
+            </p>
+            <Button
+              className="mt-3"
+              variant="secondary"
+              onClick={async () => {
+                const result = await onRunCalibrationTare();
+                setCalibrationMessage(result.message);
+              }}
+              disabled={!isScaleConnected}
+            >
+              Send TARE
+            </Button>
+          </div>
+
+          <div className="rounded-[24px] bg-white/90 px-4 py-4">
+            <div className="text-sm font-semibold text-slate-900">2. Place a known weight</div>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              Enter the known weight in grams, then calculate the suggested factor from the live scale reading.
+            </p>
+            <Field label="Known weight (g)">
+              <Input
+                type="number"
+                min={1}
+                step="0.1"
+                value={knownWeightGrams}
+                onChange={(event) => setKnownWeightGrams(event.target.value)}
+              />
+            </Field>
+            <Button className="mt-3" onClick={handleCalculateCalibration} disabled={!isScaleConnected}>
+              Calculate suggested factor
+            </Button>
+          </div>
+
+          <div className="rounded-[24px] bg-white/90 px-4 py-4">
+            <div className="text-sm font-semibold text-slate-900">3. Review the firmware command</div>
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-slate-950 px-4 py-3 text-white">
+              <code className="min-w-0 break-all font-mono text-sm">
+                {suggestedCalibrationFactor !== null
+                  ? `CALIBRATE:${suggestedCalibrationFactor.toFixed(4)}`
+                  : "CALIBRATE:<factor>"}
+              </code>
+              <button
+                type="button"
+                onClick={() => void handleCopyCalibrationCommand()}
+                disabled={suggestedCalibrationFactor === null}
+                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+              >
+                {copiedCalibrationCommand ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                {copiedCalibrationCommand ? "Copied" : "Copy"}
+              </button>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Saved locally, not yet applied to hardware
+            </p>
+            <Button
+              className="mt-3"
+              variant="secondary"
+              onClick={() => {
+                if (suggestedCalibrationFactor === null) {
+                  return;
+                }
+                onSaveCalibrationFactor(suggestedCalibrationFactor);
+                setCalibrationMessage("Saved locally, not yet applied to hardware");
+              }}
+              disabled={suggestedCalibrationFactor === null}
+            >
+              Save factor locally
+            </Button>
+          </div>
+
+          {calibrationMessage ? (
+            <div className="rounded-2xl bg-amber-100 px-4 py-3 text-sm text-amber-900">
+              {calibrationMessage}
+            </div>
+          ) : null}
+        </div>
+      </Card>
+
       <Card className="overflow-hidden bg-[linear-gradient(145deg,rgba(239,246,255,0.98),rgba(255,255,255,0.95))]">
         <div className="text-sm font-medium text-blue-600">{t("profile.eyebrow")}</div>
         <div className="mt-1 text-2xl font-semibold text-slate-950">{t("profile.title")}</div>
@@ -580,6 +799,112 @@ export function ProfileScreen({
           {t("common.openDebugTools")}
         </Button>
       </Card>
+
+      <div className="mt-4 mb-1 px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+        Developer
+      </div>
+      <div className="overflow-hidden rounded-[16px] bg-white shadow-sm">
+        <button
+          type="button"
+          onClick={() => setDeveloperOpen((prev) => !prev)}
+          className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-slate-50"
+        >
+          <span className="flex-1 text-[14px] font-medium text-slate-800">Developer tools</span>
+          <ChevronDown
+            className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${
+              developerOpen ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+        <AnimatePresence initial={false}>
+          {developerOpen ? (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.22, ease: "easeInOut" }}
+              className="overflow-hidden"
+            >
+              <div className="border-t border-slate-100 bg-slate-50 px-4 py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[14px] font-medium text-slate-900">Debug Logs</div>
+                    <div className="mt-1 text-[12px] leading-5 text-slate-500">
+                      In-memory device logs for capture and analysis flow
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDebugLogsOpen((prev) => !prev)}
+                    className="rounded-full bg-white px-3 py-1.5 text-[12px] font-medium text-slate-700 shadow-sm active:bg-slate-100"
+                  >
+                    {debugLogsOpen ? "Hide" : "Show"}
+                  </button>
+                </div>
+
+                {debugLogsOpen ? (
+                  <div className="mt-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        onClick={() => void handleCopyAllLogs()}
+                        disabled={reversedDebugLogs.length === 0}
+                      >
+                        Copy all
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={clearDebugLogs}
+                        disabled={reversedDebugLogs.length === 0}
+                      >
+                        Clear logs
+                      </Button>
+                    </div>
+
+                    {reversedDebugLogs.length === 0 ? (
+                      <div className="rounded-2xl bg-white px-4 py-3 text-sm text-slate-500">
+                        No debug logs yet.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {reversedDebugLogs.map((entry) => {
+                          const formattedTime = new Date(entry.timestamp).toLocaleTimeString("en-GB", {
+                            hour12: false,
+                          });
+                          const formattedData =
+                            entry.data === undefined ? "" : JSON.stringify(entry.data, null, 2);
+
+                          return (
+                            <div key={entry.id} className="rounded-2xl bg-white px-4 py-3">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-medium text-slate-500">{formattedTime}</span>
+                                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-700">
+                                  {entry.tag}
+                                </span>
+                              </div>
+                              <div className="mt-2 text-sm text-slate-900">{entry.message}</div>
+                              {formattedData ? (
+                                <details className="mt-3 rounded-xl bg-slate-50 px-3 py-2">
+                                  <summary className="cursor-pointer text-xs font-medium text-slate-600">
+                                    JSON data
+                                  </summary>
+                                  <pre className="mt-2 whitespace-pre-wrap break-all text-xs leading-5 text-slate-700">
+                                    {formattedData}
+                                  </pre>
+                                </details>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </div>
 
       <Card>
         <div className="text-sm font-medium text-slate-500">{t("profile.metricsTitle")}</div>

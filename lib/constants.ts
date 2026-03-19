@@ -16,6 +16,7 @@ export const STORAGE_KEYS = {
   meals: "smartbite:meals",
   profile: "smartbite:profile",
   language: "smartbite:language",
+  scaleCalibration: "smartbite:scale-calibration",
 } as const;
 
 export const ACTIVITY_LEVELS: Record<ActivityLevel, { label: string; multiplier: number }> = {

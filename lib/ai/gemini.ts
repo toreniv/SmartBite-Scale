@@ -1,5 +1,3 @@
-import "server-only";
-
 import type { AnalyzeMealRequest } from "@/lib/types";
 import {
   AIProviderError,
@@ -11,7 +9,8 @@ import {
 } from "@/lib/ai/normalize";
 
 const GEMINI_API_ROOT = "https://generativelanguage.googleapis.com/v1beta/models";
-const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
+const FALLBACK_GEMINI_MODEL = "gemini-1.5-flash-latest";
 
 interface GeminiErrorPayload {
   error?: {
@@ -46,31 +45,14 @@ async function readGeminiError(response: Response) {
   }
 }
 
-function extractGeminiText(payload: GeminiResponsePayload) {
-  const parts = payload.candidates?.[0]?.content?.parts ?? [];
-  const text = parts
-    .map((part) => part.text?.trim() || "")
-    .filter(Boolean)
-    .join("\n");
-
-  if (!text) {
-    throw new Error("Gemini did not return any text output.");
-  }
-
-  return text;
-}
-
-export async function analyzeMealWithGemini(request: AnalyzeMealRequest) {
-  const apiKey = process.env.GEMINI_API_KEY;
-
-  if (!apiKey) {
-    throw new AIProviderError("gemini", "Gemini API key is not configured.", {
-      retryable: false,
-    });
-  }
-
+async function sendGeminiRequest(
+  model: string,
+  apiKey: string,
+  request: AnalyzeMealRequest,
+) {
   const image = parseImageDataUrl(request.imageBase64);
-  const response = await fetch(`${GEMINI_API_ROOT}/${getGeminiModel()}:generateContent`, {
+
+  return fetch(`${GEMINI_API_ROOT}/${model}:generateContent`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -99,6 +81,37 @@ export async function analyzeMealWithGemini(request: AnalyzeMealRequest) {
       },
     }),
   });
+}
+
+function extractGeminiText(payload: GeminiResponsePayload) {
+  const parts = payload.candidates?.[0]?.content?.parts ?? [];
+  const text = parts
+    .map((part) => part.text?.trim() || "")
+    .filter(Boolean)
+    .join("\n");
+
+  if (!text) {
+    throw new Error("Gemini did not return any text output.");
+  }
+
+  return text;
+}
+
+export async function analyzeMealWithGemini(request: AnalyzeMealRequest) {
+  const apiKey = process.env.GEMINI_API_KEY;
+
+  if (!apiKey) {
+    throw new AIProviderError("gemini", "Gemini API key is not configured.", {
+      retryable: false,
+    });
+  }
+
+  const primaryModel = getGeminiModel();
+  let response = await sendGeminiRequest(primaryModel, apiKey, request);
+
+  if (!response.ok && response.status === 404 && primaryModel === DEFAULT_GEMINI_MODEL) {
+    response = await sendGeminiRequest(FALLBACK_GEMINI_MODEL, apiKey, request);
+  }
 
   if (!response.ok) {
     const details = await readGeminiError(response);

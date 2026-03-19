@@ -51,8 +51,12 @@ export async function requestScaleDevice() {
 
   const discoveredDevice: DiscoveredDevice = {
     id: device.id ?? crypto.randomUUID(),
+    address: device.id ?? crypto.randomUUID(),
     name: device.name?.trim() || "SmartBite Scale",
     signalStrength: null,
+    transport: "ble",
+    isPaired: false,
+    isHc06: false,
   };
 
   return { device, discoveredDevice };

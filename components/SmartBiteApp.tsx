@@ -3,7 +3,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { Loader2 } from "lucide-react";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { ConnectScreen } from "@/components/screens/ConnectScreen";
 import { CaptureScreen } from "@/components/screens/CaptureScreen";
@@ -19,10 +20,13 @@ import { useCamera } from "@/hooks/useCamera";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useMealAnalysis } from "@/hooks/useMealAnalysis";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { STORAGE_KEYS } from "@/lib/constants";
 import { getCurrentUser } from "@/lib/localAuth";
+import { readStorage, writeStorage } from "@/lib/storage";
 import type { AppPhase, AppSection, NavDirection, User } from "@/lib/types";
 
 const TAB_ORDER: AppSection[] = ["home", "capture", "history", "profile"];
+const DEFAULT_CALIBRATION_FACTOR = -7050;
 
 export function SmartBiteApp() {
   const { dir, t } = useLanguage();
@@ -36,6 +40,7 @@ export function SmartBiteApp() {
   const [mealNote, setMealNote] = useState("");
   const [toast, setToast] = useState("");
   const [profileAuthOpen, setProfileAuthOpen] = useState(false);
+  const [calibrationFactor, setCalibrationFactor] = useState(DEFAULT_CALIBRATION_FACTOR);
   const [lastAnalysisRequest, setLastAnalysisRequest] = useState<{
     blob: Blob;
     note: string;
@@ -46,6 +51,7 @@ export function SmartBiteApp() {
   const camera = useCamera();
   const { profile, setProfile, metrics } = useUserProfile();
   const analysis = useMealAnalysis(profile, metrics.dailyCalorieTarget, metrics.proteinTarget);
+  const previousReconnectStateRef = useRef(false);
 
   useEffect(() => {
     setCurrentUser(getCurrentUser());
@@ -77,6 +83,28 @@ export function SmartBiteApp() {
   }, [toast]);
 
   useEffect(() => {
+    const wasReconnecting = previousReconnectStateRef.current;
+    const isRecovered =
+      wasReconnecting &&
+      bluetooth.isConnected &&
+      bluetooth.hasConfirmedPong &&
+      !bluetooth.isReconnecting;
+
+    if (isRecovered) {
+      showToast("Scale reconnected \u2713");
+      bluetooth.dismissBanner();
+    }
+
+    previousReconnectStateRef.current = bluetooth.isReconnecting;
+  }, [bluetooth.hasConfirmedPong, bluetooth.isConnected, bluetooth.isReconnecting]);
+
+  useEffect(() => {
+    setCalibrationFactor(
+      readStorage<number>(STORAGE_KEYS.scaleCalibration, DEFAULT_CALIBRATION_FACTOR),
+    );
+  }, []);
+
+  useEffect(() => {
     return () => {
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
@@ -84,17 +112,15 @@ export function SmartBiteApp() {
     };
   }, [previewUrl]);
 
-  const measuredWeight = bluetooth.stableWeight || bluetooth.latestWeight || undefined;
-  const connectionLabel = bluetooth.isConnected
-    ? t(
-        bluetooth.deviceName
-          ? "common.connectionLabel.connectedTo"
-          : "common.connectionLabel.connected",
-        { name: bluetooth.deviceName },
-      )
-    : bluetooth.isBypassMode
-      ? t("common.connectionLabel.bypass")
-      : t("common.connectionLabel.notConnected");
+  const measuredWeight = bluetooth.isConnected
+    ? bluetooth.stableWeight || bluetooth.latestWeight || undefined
+    : undefined;
+  const connectionLabel = bluetooth.connectionLabel;
+  const connectionTone = bluetooth.isConnected && bluetooth.hasConfirmedPong
+    ? "connected"
+    : bluetooth.isReconnecting || bluetooth.isConnecting
+      ? "reconnecting"
+      : "disconnected";
 
   const showToast = (message: string) => {
     setToast(message);
@@ -131,7 +157,18 @@ export function SmartBiteApp() {
 
   const connectScale = async () => {
     setPhase("connect");
-    const result = await bluetooth.connect();
+    void bluetooth.scan();
+  };
+
+  const handleConnectDevice = async (deviceAddress: string) => {
+    const device = bluetooth.devices.find((entry) => entry.address === deviceAddress);
+
+    if (!device) {
+      showToast("Device is no longer available. Scan again.");
+      return;
+    }
+
+    const result = await bluetooth.connectDevice(device);
     showToast(result.message);
 
     if (result.success) {
@@ -144,6 +181,12 @@ export function SmartBiteApp() {
     bluetooth.enableBypassMode();
     setPhase("app");
     setSection("home");
+  };
+
+  const saveCalibrationFactor = (value: number) => {
+    setCalibrationFactor(value);
+    writeStorage(STORAGE_KEYS.scaleCalibration, value);
+    showToast("Saved locally, not yet applied to hardware");
   };
 
   const handleSelectUpload = (event: ChangeEvent<HTMLInputElement>) => {
@@ -222,8 +265,7 @@ export function SmartBiteApp() {
   const latestMeal = analysis.history[0] ?? null;
   const latestResult = analysis.result ?? latestMeal;
   const latestResultImageUrl = latestMeal?.imageDataUrl ?? previewUrl;
-  const latestMealWeight =
-    latestMeal?.measuredWeightGrams ?? latestMeal?.estimatedWeightGrams ?? measuredWeight;
+  const latestMealWeight = latestMeal?.measuredWeightGrams ?? measuredWeight ?? null;
   const lastServingEvent = bluetooth.lastServingEvent
     ? t("bluetooth.servingEventAt", {
         time: new Date(bluetooth.lastServingEvent.detectedAt).toLocaleTimeString(),
@@ -273,18 +315,28 @@ export function SmartBiteApp() {
           progress={analysis.dailyProgress}
           latestResult={latestResult}
           latestResultImageUrl={latestResultImageUrl}
-          measuredWeight={latestMealWeight ?? 0}
+          measuredWeight={latestMealWeight}
           disclaimer={analysis.disclaimer}
           recommendations={analysis.recommendations}
         isConnected={bluetooth.isConnected}
         isDemoMode={bluetooth.isBypassMode}
+        bluetoothEnabled={bluetooth.bluetoothEnabled}
+        connectionStatus={bluetooth.connectionStatus}
+        isReconnecting={bluetooth.isReconnecting}
+        isStreamEnabled={bluetooth.isStreamEnabled}
+        hasConfirmedPong={bluetooth.hasConfirmedPong}
         latestWeight={bluetooth.latestWeight}
         stableWeight={bluetooth.stableWeight}
         measurementStatus={bluetooth.measurementStatus}
+        lastBluetoothMessage={bluetooth.lastMessage}
         navDirection={navDirection}
         onConnectScale={connectScale}
         onTare={async () => {
           const result = await bluetooth.tare();
+          showToast(result.message);
+        }}
+        onToggleStream={async (enabled) => {
+          const result = await bluetooth.setStreaming(enabled);
           showToast(result.message);
         }}
         onGoCapture={() => handleSectionChange("capture")}
@@ -344,6 +396,15 @@ export function SmartBiteApp() {
         currentUser={currentUser}
         onSignIn={() => setProfileAuthOpen(true)}
         onSignOut={handleSignOut}
+        isScaleConnected={bluetooth.isConnected}
+        currentScaleWeight={bluetooth.stableWeight || bluetooth.latestWeight}
+        currentCalibrationFactor={calibrationFactor}
+        onRunCalibrationTare={async () => {
+          const result = await bluetooth.tare();
+          showToast(result.message);
+          return result;
+        }}
+        onSaveCalibrationFactor={saveCalibrationFactor}
       />
     );
   }
@@ -355,10 +416,30 @@ export function SmartBiteApp() {
   if (phase === "connect") {
     return (
       <ConnectScreen
+        supported={bluetooth.supported}
+        bluetoothEnabled={bluetooth.bluetoothEnabled}
         devices={bluetooth.devices}
-        scanning={bluetooth.isConnecting}
+        scanning={bluetooth.isScanning}
+        connecting={bluetooth.isConnecting}
+        connectionStatus={bluetooth.connectionStatus}
+        permissionBlocked={bluetooth.permissionBlocked}
+        noDevicesFound={bluetooth.scanCompletedWithNoDevices}
         lastMessage={bluetooth.lastMessage}
-        onRetry={connectScale}
+        onGrantPermission={() => {
+          void bluetooth.requestPermissions().then((result) => showToast(result.message));
+        }}
+        onEnableBluetooth={() => {
+          void bluetooth.enableBluetooth().then((result) => showToast(result.message));
+        }}
+        onOpenSettings={() => {
+          void bluetooth.openSettings().then((result) => showToast(result.message));
+        }}
+        onScan={() => {
+          void bluetooth.scan().then((result) => showToast(result.message));
+        }}
+        onConnectDevice={(device) => {
+          void handleConnectDevice(device.address);
+        }}
         onSkip={continueWithoutScale}
         onCancel={() => setPhase("welcome")}
       />
@@ -371,8 +452,39 @@ export function SmartBiteApp() {
         activeSection={section}
         onChangeSection={handleSectionChange}
         connectionLabel={connectionLabel}
+        connectionTone={connectionTone}
         onOpenDebug={() => setDebugOpen(true)}
       >
+        {bluetooth.connectionBanner ? (
+          <Card className="mb-4 rounded-2xl border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-2">
+                {bluetooth.isReconnecting ? (
+                  <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-amber-700" />
+                ) : null}
+                <span>{bluetooth.connectionBanner}</span>
+              </div>
+              {bluetooth.reconnectFailed ? (
+                <button
+                  onClick={() => {
+                    void bluetooth.retryReconnect().then((result) => showToast(result.message));
+                  }}
+                  className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold text-amber-900"
+                >
+                  Retry
+                </button>
+              ) : !bluetooth.isReconnecting ? (
+                <button
+                  onClick={bluetooth.dismissBanner}
+                  className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold text-amber-900"
+                >
+                  Dismiss
+                </button>
+              ) : null}
+            </div>
+          </Card>
+        ) : null}
+
         {toast ? (
           <Card className="mb-4 rounded-2xl bg-slate-950 px-4 py-3 text-sm text-white">
             {toast}

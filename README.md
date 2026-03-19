@@ -13,12 +13,13 @@ This repository is a working prototype, not a finished product.
 
 What works today:
 
-- meal photo analysis through a backend `/api/analyze` route
+- meal photo analysis through a backend `/api/analyze-meal` route
 - server-only Gemini key handling
+- OpenAI image-analysis fallback when Gemini is unavailable
 - profile-based calorie and macro targets
 - local meal history stored in the browser
 - demo mode for testing without hardware
-- Bluetooth scale connection flow and debug tooling
+- Android Bluetooth Classic HC-06 connection flow and debug tooling
 - static export support for Capacitor builds
 
 What is still in progress:
@@ -35,7 +36,7 @@ The app currently focuses on the core prototype loop:
 1. connect a scale or enter demo mode
 2. capture or upload a meal photo
 3. send the meal to the backend analysis route
-4. return estimated calories, protein, carbs, fat, and confidence
+4. return estimated calories, protein, carbs, fat, ingredients, and confidence
 5. view the result alongside daily targets and meal history
 
 ## Stack
@@ -85,6 +86,43 @@ Important:
 - `NEXT_OUTPUT_MODE=export` is used for static Capacitor builds
 
 See `.env.example` for the current supported configuration.
+
+## Bluetooth Classic Protocol
+
+The Android app connects to the Arduino scale over Bluetooth Classic RFCOMM using:
+
+- UUID: `00001101-0000-1000-8000-00805F9B34FB`
+- Transport: HC-06 on `Serial1`
+- Baud rate: `9600`
+- Line endings: `\n` or `\r\n`
+
+Arduino -> app messages:
+
+- `WEIGHT:123.45`
+- `STATUS:READY`
+- `STATUS:STREAM_ON`
+- `STATUS:STREAM_OFF`
+- `TARE_DONE`
+- `PONG`
+- `ERROR:UNKNOWN_COMMAND`
+
+App -> Arduino commands:
+
+- `TARE`
+- `STREAM_ON`
+- `STREAM_OFF`
+- `STATUS`
+- `PING`
+
+Expected future firmware command:
+
+- `CALIBRATE:<float>`
+
+Important:
+
+- the currently deployed firmware does not yet implement `CALIBRATE:<float>`
+- the app therefore stores a suggested calibration factor locally and labels it as pending firmware support
+- the current firmware streams filtered grams, not raw HX711 counts, so calibration suggestions are derived from the live reading plus the saved factor
 
 ## Screenshots
 

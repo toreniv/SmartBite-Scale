@@ -1,25 +1,79 @@
+import { Buffer } from "node:buffer";
+
 import { NextResponse } from "next/server";
-import { analyzeMealWithGemini, hasGeminiApiKey } from "@/lib/ai/gemini";
-import { analyzeMealWithMock } from "@/lib/ai/mock";
-import { AIProviderError, toProviderAttempt } from "@/lib/ai/normalize";
+import { analyzeMealWithFallback } from "@/lib/ai/analyzeMeal";
+import { AIProviderError } from "@/lib/ai/normalize";
 import { APP_DISCLAIMER } from "@/lib/constants";
 import type {
+  AnalyzeMealErrorCode,
   AnalyzeMealErrorResponse,
   AnalyzeMealRequest,
-  AnalyzeMealResponse,
+  UserProfile,
 } from "@/lib/types";
 
 export const runtime = "nodejs";
 
 const ALLOWED_METHODS = "POST, OPTIONS";
 const ALLOWED_HEADERS = "Content-Type";
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+type ParsedAnalyzeRequest =
+  | {
+      request: AnalyzeMealRequest;
+    }
+  | {
+      error: string;
+      code?: AnalyzeMealErrorCode;
+    };
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isMockFallbackEnabled() {
-  return process.env.ALLOW_MOCK_ANALYSIS_FALLBACK === "true" || process.env.NODE_ENV !== "production";
+function normalizeWeight(value: unknown) {
+  if (value === undefined || value === null || value === "" || value === "null") {
+    return undefined;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function normalizeNote(value: unknown) {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  return typeof value === "string" ? value.trim() : null;
+}
+
+function normalizeProfile(value: unknown) {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      return isObject(parsed) ? (parsed as unknown as UserProfile) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  return isObject(value) ? (value as unknown as UserProfile) : null;
+}
+
+function getApproximateImageSizeBytes(imageBase64: string) {
+  const separatorIndex = imageBase64.indexOf(",");
+  const base64 =
+    separatorIndex === -1 ? imageBase64.trim() : imageBase64.slice(separatorIndex + 1).replace(/\s+/g, "");
+
+  return Math.ceil(base64.length * 0.75);
 }
 
 function getCorsAllowedOrigin(request: Request) {
@@ -54,33 +108,10 @@ function withCorsHeaders(response: NextResponse, request: Request) {
   return response;
 }
 
-function isAnalyzeMealRequest(value: unknown): value is AnalyzeMealRequest {
-  if (!isObject(value) || typeof value.imageBase64 !== "string" || !value.imageBase64.trim()) {
-    return false;
-  }
-
-  if (value.note !== undefined && typeof value.note !== "string") {
-    return false;
-  }
-
-  if (
-    value.measuredWeightGrams !== undefined &&
-    (typeof value.measuredWeightGrams !== "number" || !Number.isFinite(value.measuredWeightGrams))
-  ) {
-    return false;
-  }
-
-  if (value.profile !== undefined && !isObject(value.profile)) {
-    return false;
-  }
-
-  return true;
-}
-
 function jsonError(
   request: Request,
   status: number,
-  code: AnalyzeMealErrorResponse["error"]["code"],
+  code: AnalyzeMealErrorCode,
   message: string,
   retryable: boolean,
   attempts: AnalyzeMealErrorResponse["attempts"] = [],
@@ -97,8 +128,88 @@ function jsonError(
   return withCorsHeaders(NextResponse.json(payload, { status }), request);
 }
 
-function jsonResponse(request: Request, payload: AnalyzeMealResponse) {
-  return withCorsHeaders(NextResponse.json(payload), request);
+async function parseJsonRequest(request: Request): Promise<ParsedAnalyzeRequest> {
+  let payload: Record<string, unknown>;
+
+  try {
+    payload = (await request.json()) as Record<string, unknown>;
+  } catch {
+    return { error: "Request body must be valid JSON." };
+  }
+
+  const imageBase64 =
+    typeof payload.imageBase64 === "string" && payload.imageBase64.trim() ? payload.imageBase64.trim() : null;
+
+  if (!imageBase64) {
+    return { error: "Request body must include a valid imageBase64 data URL." };
+  }
+
+  const note = normalizeNote(payload.note);
+  if (note === null) {
+    return { error: "note must be a string when provided." };
+  }
+
+  const measuredWeightGrams = normalizeWeight(payload.weightGrams ?? payload.measuredWeightGrams);
+  if (measuredWeightGrams === null) {
+    return { error: "weightGrams must be a finite number when provided." };
+  }
+
+  const profile = normalizeProfile(payload.profile);
+  if (profile === null) {
+    return { error: "profile must be an object when provided." };
+  }
+
+  return {
+    request: {
+      imageBase64,
+      ...(note ? { note } : {}),
+      ...(measuredWeightGrams !== undefined ? { measuredWeightGrams, weightGrams: measuredWeightGrams } : {}),
+      ...(profile ? { profile } : {}),
+    } satisfies AnalyzeMealRequest,
+  };
+}
+
+async function parseFormDataRequest(request: Request): Promise<ParsedAnalyzeRequest> {
+  const formData = await request.formData();
+  const image = formData.get("image");
+
+  if (!(image instanceof File)) {
+    return { error: "An image file is required." };
+  }
+
+  if (image.size > MAX_IMAGE_BYTES) {
+    return { code: "IMAGE_TOO_LARGE" as const, error: "Image is too large. Please use a smaller photo." };
+  }
+
+  const note = normalizeNote(formData.get("note"));
+  if (note === null) {
+    return { error: "note must be a string when provided." };
+  }
+
+  const measuredWeightGrams = normalizeWeight(
+    formData.get("weightGrams") ?? formData.get("measuredWeightGrams"),
+  );
+  if (measuredWeightGrams === null) {
+    return { error: "weightGrams must be a finite number when provided." };
+  }
+
+  const profile = normalizeProfile(formData.get("profile"));
+  if (profile === null) {
+    return { error: "profile must be valid JSON when provided." };
+  }
+
+  const imageBase64 = `data:${image.type || "image/jpeg"};base64,${Buffer.from(
+    await image.arrayBuffer(),
+  ).toString("base64")}`;
+
+  return {
+    request: {
+      imageBase64,
+      ...(note ? { note } : {}),
+      ...(measuredWeightGrams !== undefined ? { measuredWeightGrams, weightGrams: measuredWeightGrams } : {}),
+      ...(profile ? { profile } : {}),
+    } satisfies AnalyzeMealRequest,
+  };
 }
 
 export async function OPTIONS(request: Request) {
@@ -106,74 +217,44 @@ export async function OPTIONS(request: Request) {
 }
 
 export async function POST(request: Request) {
-  let payload: unknown;
+  const contentType = request.headers.get("content-type")?.toLowerCase() || "";
 
   try {
-    payload = await request.json();
-  } catch {
-    return jsonError(request, 400, "INVALID_REQUEST", "Request body must be valid JSON.", false);
-  }
+    const parsed = contentType.includes("multipart/form-data")
+      ? await parseFormDataRequest(request)
+      : await parseJsonRequest(request);
 
-  if (!isAnalyzeMealRequest(payload)) {
-    return jsonError(
-      request,
-      400,
-      "INVALID_REQUEST",
-      "Request body must include a valid imageBase64 data URL.",
-      false,
-    );
-  }
-
-  if (!hasGeminiApiKey()) {
-    if (!isMockFallbackEnabled()) {
+    if ("error" in parsed) {
       return jsonError(
         request,
-        503,
-        "PROVIDER_UNAVAILABLE",
-        "Gemini API key is not configured on the backend.",
+        parsed.code === "IMAGE_TOO_LARGE" ? 400 : 400,
+        parsed.code ?? "INVALID_REQUEST",
+        parsed.error,
         false,
       );
     }
 
-    const mockResult = await analyzeMealWithMock(payload);
-    return jsonResponse(request, {
-      ...mockResult,
-      disclaimer: APP_DISCLAIMER,
-      usedFallback: true,
-      attempts: [toProviderAttempt("mock", "success")],
-    });
-  }
-
-  try {
-    const geminiResult = await analyzeMealWithGemini(payload);
-    return jsonResponse(request, {
-      ...geminiResult,
-      disclaimer: APP_DISCLAIMER,
-      usedFallback: false,
-      attempts: [toProviderAttempt("gemini", "success")],
-    });
-  } catch (error) {
-    if (isMockFallbackEnabled()) {
-      const mockResult = await analyzeMealWithMock(payload);
-      return jsonResponse(request, {
-        ...mockResult,
-        disclaimer: APP_DISCLAIMER,
-        usedFallback: true,
-        attempts: [
-          toProviderAttempt("gemini", "failed"),
-          toProviderAttempt("mock", "success"),
-        ],
-      });
+    if (getApproximateImageSizeBytes(parsed.request.imageBase64) > MAX_IMAGE_BYTES) {
+      return jsonError(
+        request,
+        400,
+        "IMAGE_TOO_LARGE",
+        "Image is too large. Please use a smaller photo.",
+        false,
+      );
     }
 
+    const result = await analyzeMealWithFallback(parsed.request, APP_DISCLAIMER);
+    return withCorsHeaders(NextResponse.json(result), request);
+  } catch (error) {
     if (error instanceof AIProviderError) {
       return jsonError(
         request,
-        error.status ?? 502,
-        "ANALYSIS_FAILED",
-        error.message,
+        error.status ?? 503,
+        "PROVIDER_UNAVAILABLE",
+        error.message || "Meal analysis failed for the configured providers.",
         error.retryable,
-        [toProviderAttempt("gemini", "failed")],
+        error.attempts,
       );
     }
 
@@ -181,9 +262,8 @@ export async function POST(request: Request) {
       request,
       500,
       "ANALYSIS_FAILED",
-      "Meal analysis failed on the backend.",
+      "Meal analysis failed on the server.",
       true,
-      [toProviderAttempt("gemini", "failed")],
     );
   }
 }

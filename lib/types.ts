@@ -25,13 +25,25 @@ export type Screen =
   | "debug";
 
 export type AnalysisProvider = "openai" | "gemini" | "mock";
+export type BluetoothTransport = "classic" | "ble";
+export type BluetoothConnectionStatus =
+  | "idle"
+  | "permissions-denied"
+  | "bluetooth-disabled"
+  | "scanning"
+  | "connecting"
+  | "reconnecting"
+  | "connected"
+  | "error";
+export type ScaleCommand = "TARE" | "STREAM_ON" | "STREAM_OFF" | "STATUS" | "PING";
 
 export type AnalyzeMealErrorCode =
   | "INVALID_REQUEST"
   | "PROVIDER_UNAVAILABLE"
   | "ANALYSIS_FAILED"
   | "TIMEOUT"
-  | "IMAGE_TOO_LARGE";
+  | "IMAGE_TOO_LARGE"
+  | "RATE_LIMITED";
 
 export type PermissionStateLike = "granted" | "denied" | "prompt" | "unknown";
 
@@ -114,6 +126,7 @@ export interface MealAnalysisResult {
   protein: number;
   carbs: number;
   fat: number;
+  ingredients: string[];
   confidence: number;
   explanation: string;
   provider: AnalysisProvider;
@@ -139,7 +152,26 @@ export interface RecommendationItem {
 export interface DiscoveredDevice {
   id: string;
   name: string;
+  address: string;
   signalStrength: number | null;
+  transport: BluetoothTransport;
+  isPaired: boolean;
+  isHc06: boolean;
+}
+
+export interface BluetoothPermissionStatus {
+  scan: PermissionStateLike;
+  connect: PermissionStateLike;
+  location: PermissionStateLike;
+}
+
+export interface BluetoothAvailabilityState {
+  supported: boolean;
+  enabled: boolean;
+  discovering: boolean;
+  connected: boolean;
+  permissions: BluetoothPermissionStatus;
+  permissionBlocked?: boolean;
 }
 
 export interface BluetoothRemoteGATTCharacteristicLike {
@@ -189,11 +221,22 @@ export interface ServingEvent {
 
 export interface BluetoothState {
   supported: boolean;
+  bluetoothEnabled: boolean;
   initialized: boolean;
+  isScanning: boolean;
   isConnecting: boolean;
   isConnected: boolean;
   isBypassMode: boolean;
+  isReconnecting: boolean;
+  isStreamEnabled: boolean;
+  hasConfirmedPong: boolean;
+  reconnectAttempts: number;
+  connectionStatus: BluetoothConnectionStatus;
   connectionLabel: string;
+  connectionBanner: string;
+  permissionBlocked: boolean;
+  scanCompletedWithNoDevices: boolean;
+  reconnectFailed: boolean;
   latestWeight: number;
   stableWeight: number;
   weightSamples: number[];
@@ -203,12 +246,14 @@ export interface BluetoothState {
   devices: DiscoveredDevice[];
   deviceName: string;
   lastServingEvent: ServingEvent | null;
+  permissions: BluetoothPermissionStatus;
 }
 
 export interface AnalyzeMealRequest {
   imageBase64: string;
   note?: string;
   measuredWeightGrams?: number;
+  weightGrams?: number | null;
   profile?: UserProfile;
 }
 

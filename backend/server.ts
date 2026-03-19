@@ -45,10 +45,13 @@ const analyzeRateLimiter = rateLimit({
 
 app.use(cors(corsOptions));
 app.options("/api/analyze", cors(corsOptions));
+app.options("/api/analyze-meal", cors(corsOptions));
 app.use(express.json({ limit: "20mb" }));
 
 app.post("/api/analyze", analyzeRateLimiter);
+app.post("/api/analyze-meal", analyzeRateLimiter);
 app.use("/api/analyze", analyzeRouter);
+app.use("/api/analyze-meal", analyzeRouter);
 
 app.use((error: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (
