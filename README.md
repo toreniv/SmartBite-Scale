@@ -4,10 +4,10 @@
 > custom Bluetooth hardware, and a mobile-first React app, all wired together.
 
 <p align="center">
-  <img src="images/First_screen.jpg" alt="Connect your scale" width="200" />
-  <img src="images/Home_screen.jpg" alt="Home — live weight and meal result" width="200" />
-  <img src="images/Capture_screen.jpg" alt="Capture — photo meal analysis" width="200" />
-  <img src="images/Profile_screen.jpg" alt="Profile — health goals and account" width="200" />
+  <img src="images/First_screen.png" alt="Connect your scale" width="200" />
+  <img src="images/Home_screen.png" alt="Home — live weight and meal result" width="200" />
+  <img src="images/Capture_screen.png" alt="Capture — photo meal analysis" width="200" />
+  <img src="images/Profile_screen.png" alt="Profile — health goals and account" width="200" />
 </p>
 
 <p align="center">
