@@ -4,16 +4,6 @@
 > custom Bluetooth hardware, and a mobile-first React app, all wired together.
 
 <p align="center">
-  <img src="docs/screenshots/dashboard-screen.png" alt="Dashboard" width="220" />
-  <img src="docs/screenshots/capture-screen.png" alt="Capture" width="220" />
-  <img src="docs/screenshots/history-screen.png" alt="History" width="220" />
-</p>
-
----
-
-## Screenshots
-
-<p align="center">
   <img src="images/First_screen.jpg" alt="Connect your scale" width="200" />
   <img src="images/Home_screen.jpg" alt="Home — live weight and meal result" width="200" />
   <img src="images/Capture_screen.jpg" alt="Capture — photo meal analysis" width="200" />
@@ -23,9 +13,8 @@
 <p align="center">
   <sub>From left: Scale connection · Live dashboard · Meal capture · Profile & goals</sub>
 </p>
- 
- ---
 
+---
 
 ## What is this?
 
@@ -57,7 +46,7 @@ input required.
 - **Server-side AI key handling** — Gemini API key never reaches the client.
   All analysis goes through a Next.js API route with an OpenAI fallback chain.
 
-- **Custom BLE/Bluetooth Classic protocol** — Arduino firmware streams
+- **Custom Bluetooth Classic protocol** — Arduino firmware streams
   `WEIGHT:123.45` over HC-06 RFCOMM. The Android app parses this in a
   dedicated hook with reconnect logic and a live debug console.
 
@@ -91,7 +80,6 @@ This is an **active prototype**, not a production product.
 - Production deployment and backend hosting
 - `CALIBRATE:<float>` firmware command
 - PWA / iOS distribution
-- Polished onboarding and screenshots
 
 ---
 
@@ -143,8 +131,7 @@ public/                       Static assets and icons
 android/                      Capacitor Android project
 firmware/
   arduino-mega-hc06/          Arduino Mega firmware (HX711 + HC-06)
-docs/
-  screenshots/                App screenshots for README
+images/                       App screenshots for README
 ```
 
 ---
@@ -164,7 +151,7 @@ docs/
 git clone https://github.com/torenniv/SmartBite-Scale.git
 cd SmartBite-Scale
 npm install
-cp .env.example .env.local   # fill in your Gemini key
+cp .env.example .env.local
 npm run dev
 ```
 
@@ -219,8 +206,8 @@ PING            connection check
 
 ## Known limitations
 
-- Web Bluetooth / Bluetooth Classic support requires Chrome on Android
-- AI macro accuracy depends heavily on image quality and meal complexity
+- Bluetooth Classic support requires Chrome on Android
+- AI macro accuracy depends on image quality and meal complexity
 - `CALIBRATE:<float>` firmware command is not yet implemented
 - No cloud sync — all data is stored locally in the browser
 - Authentication is local-only (localStorage)
@@ -230,5 +217,3 @@ PING            connection check
 ## License
 
 MIT © [Niv Toren](https://github.com/torenniv)
-```
-
