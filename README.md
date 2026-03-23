@@ -113,6 +113,78 @@ This is an **active prototype**, not a production product.
 
 ---
 
+## Hardware wiring
+
+<p align="center">
+  <img src="images/circuit.png" alt="SmartBite Scale wiring diagram" width="700" />
+  <br/>
+  <sub>Figure 1 — SmartBite Scale wiring diagram (Arduino Mega 2560 + HX711 + HC-06 + RGB LED)</sub>
+</p>
+
+### Arduino Mega ↔ Modules
+
+| From (Arduino Mega) | To / Module pin   | Via                           | Notes                        |
+|---------------------|-------------------|-------------------------------|------------------------------|
+| 5V                  | HX711 VCC         | —                             | HX711 power                  |
+| GND                 | HX711 GND         | —                             | Common ground                |
+| D4                  | HX711 DT          | —                             | HX711 data line              |
+| D5                  | HX711 SCK         | —                             | HX711 clock line             |
+| 5V                  | HC-06 VCC         | —                             | HC-06 power                  |
+| GND                 | HC-06 GND         | —                             | Common ground                |
+| D19 (RX1)           | HC-06 TXD         | —                             | HC-06 → Mega, no level shift needed |
+| D18 (TX1)           | HC-06 RXD         | R4 1 kΩ + R5 2 kΩ divider    | Mega → HC-06, divided to ~3.3 V |
+| D6                  | TARE button pin 1 | —                             | INPUT_PULLUP, active LOW     |
+| GND                 | TARE button pin 2 | —                             | Button to ground             |
+
+### Load Cell ↔ HX711
+
+| From (Load Cell) | To (HX711) | Notes                                    |
+|------------------|-----------|------------------------------------------|
+| E+               | E+        | Excitation positive                      |
+| E−               | E−        | Excitation negative                      |
+| A+               | A+        | Signal positive                          |
+| A−               | A−        | Signal negative                          |
+
+> Check your specific load cell datasheet for wire color mapping.
+
+### RGB LED (Common Cathode)
+
+| From (Arduino Mega) | Via resistor | To (LED pin)   | Notes              |
+|---------------------|--------------|----------------|--------------------|
+| D9                  | R1 — 330 Ω   | Red            | Red channel        |
+| D10                 | R2 — 220 Ω   | Green          | Green channel      |
+| D11                 | R3 — 220 Ω   | Blue           | Blue channel       |
+| GND                 | —            | Common cathode | Shared LED ground  |
+
+### Decoupling capacitors
+
+| Node              | Component | Value  | Notes                              |
+|-------------------|-----------|--------|------------------------------------|
+| HX711 VCC ↔ GND   | C1        | 100 nF | Ceramic, close to HX711 power pins |
+| HX711 VCC ↔ GND   | C2        | 10 µF  | Electrolytic bulk cap              |
+| HC-06 VCC ↔ GND   | C3        | 100 nF | Ceramic, close to HC-06 VCC/GND   |
+
+### Component reference
+
+| Ref | Value / Part        | Notes                             |
+|-----|---------------------|-----------------------------------|
+| U1  | Arduino Mega 2560   | Main controller                   |
+| U2  | HX711               | 24-bit ADC load cell amplifier    |
+| U3  | HC-06               | Bluetooth Classic UART module     |
+| J1  | Load cell connector | 4-wire (E+, E−, A+, A−)          |
+| SW1 | TARE button         | Momentary push button             |
+| D1  | RGB LED             | 5 mm, Common Cathode              |
+| R1  | 330 Ω               | Red LED current limit             |
+| R2  | 220 Ω               | Green LED current limit           |
+| R3  | 220 Ω               | Blue LED current limit            |
+| R4  | 1 kΩ                | BT voltage divider (top)          |
+| R5  | 2 kΩ                | BT voltage divider (bottom)       |
+| C1  | 100 nF              | HX711 decoupling, ceramic         |
+| C2  | 10 µF               | HX711 bulk decoupling             |
+| C3  | 100 nF              | HC-06 decoupling, ceramic         |
+
+---
+
 ## Repository layout
 
 ```
@@ -131,7 +203,7 @@ public/                       Static assets and icons
 android/                      Capacitor Android project
 firmware/
   arduino-mega-hc06/          Arduino Mega firmware (HX711 + HC-06)
-images/                       App screenshots for README
+images/                       App screenshots and circuit diagram
 ```
 
 ---
@@ -211,6 +283,18 @@ PING            connection check
 - `CALIBRATE:<float>` firmware command is not yet implemented
 - No cloud sync — all data is stored locally in the browser
 - Authentication is local-only (localStorage)
+
+---
+
+## Credits
+
+The original SmartBite hardware concept and first physical prototype
+(load-cell tray, mechanics and initial electronics) were co-designed in 2024
+as a team project by **Adi**, **Freg'**, **Ori** and **Niv Toren**.
+
+This repository contains a new, fully re-implemented firmware, updated wiring
+diagram and mobile app, created and maintained by **Niv Toren**,
+based on that original prototype.
 
 ---
 
