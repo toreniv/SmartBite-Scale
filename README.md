@@ -290,7 +290,7 @@ PING            connection check
 
 The original SmartBite hardware concept and first physical prototype
 (load-cell tray, mechanics and initial electronics) were co-designed in 2024
-as a team project by **Adi**, **Freg'**, **Ori** and **Niv Toren**.
+as a team project by **Adi**, **Faraj**, **Ori** and **Niv Toren**.
 
 This repository contains a new, fully re-implemented firmware, updated wiring
 diagram and mobile app, created and maintained by **Niv Toren**,
